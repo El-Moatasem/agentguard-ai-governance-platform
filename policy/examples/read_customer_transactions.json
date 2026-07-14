@@ -1,0 +1,10 @@
+{
+  "agent_name": "customer-support-agent",
+  "resource_name": "customer_transactions",
+  "action": "read",
+  "environment": "sandbox",
+  "context": {
+    "customer_id": "C-10045",
+    "country": "Kenya"
+  }
+}

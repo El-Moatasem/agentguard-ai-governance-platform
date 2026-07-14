@@ -1,0 +1,26 @@
+[
+  {
+    "agent_name": "customer-support-agent",
+    "user_email": "developer@demo.local",
+    "action": "read",
+    "resource_name": "customer_profile",
+    "environment": "sandbox",
+    "context": {"customer_id": "C-10045", "country": "Kenya"}
+  },
+  {
+    "agent_name": "customer-support-agent",
+    "user_email": "developer@demo.local",
+    "action": "read",
+    "resource_name": "customer_transactions",
+    "environment": "sandbox",
+    "context": {"customer_id": "C-10045", "country": "Kenya"}
+  },
+  {
+    "agent_name": "customer-support-agent",
+    "user_email": "developer@demo.local",
+    "action": "read",
+    "resource_name": "customer_profile",
+    "environment": "production",
+    "context": {"customer_id": "C-10045", "country": "Kenya"}
+  }
+]

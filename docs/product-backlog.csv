@@ -1,0 +1,14 @@
+Sprint,Epic,User Story,Acceptance Criteria,Priority,Status
+1,Foundation,"As an admin, I can authenticate with a demo token","Token grants correct role and invalid token is rejected",High,Ready
+1,Registry,"As an admin, I can register AI agents","Agent appears in registry and persists",High,Ready
+1,Registry,"As an admin, I can register protected resources","Resource appears in registry and can be referenced by policies",High,Ready
+1,DevOps,"As a reviewer, I can run tests in CI","GitHub Actions workflow runs pytest",High,Ready
+2,Policy,"As an admin, I can create allow/deny/approval policies","Policy accepts conditions and effect",High,Ready
+2,Policy,"As a developer, I can simulate an agent request","Simulator returns decision and reason",High,Ready
+2,Audit,"As an auditor, I can view decision events","Decision creates searchable audit event",High,Ready
+3,Approval,"As an approver, I can approve a sensitive request","Pending approval changes to approved and audit is written",High,Ready
+3,Approval,"As an approver, I can reject a sensitive request","Pending approval changes to rejected and audit is written",High,Ready
+3,AI,"As a developer, I can request a plain-English decision explanation","Explanation reflects deterministic decision and includes safety note",Medium,Ready
+4,Hardening,"As a reviewer, I can inspect design and testing decisions","Design/testing doc is complete",High,Ready
+4,Deployment,"As a reviewer, I can access the deployed app","Production link loads and demo workflow works",High,Ready
+4,Presentation,"As a reviewer, I can watch a complete demo","Recording is 15-20 minutes and shows all major workflows",High,Ready
