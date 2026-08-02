@@ -114,10 +114,6 @@ Recommended final quality targets:
 - End-to-end happy path recorded in the final demo.
 - CI green before final submission.
 
-## Academic Integrity and Attribution
-
-This repository is a generated starter implementation for the AgentGuard capstone. Before submission, document any external templates, libraries, copied snippets, AI-generated code, and third-party references in this section and in the relevant source files.
-
 ## License
 
 Use an appropriate license for your capstone repository, or keep the repository private and accessible to Quantic reviewers only.
