@@ -1,20 +1,48 @@
 name: Frontend CI
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - Sprint-1
+      - Sprint-2
+
+  pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: apps/web
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - run: npm ci
-      - run: npm run build
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: apps/web/yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Yarn
+        run: corepack prepare yarn@1.22.22 --activate
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Type check
+        run: yarn run tsc --noEmit
+
+      - name: Build frontend
+        run: yarn build
