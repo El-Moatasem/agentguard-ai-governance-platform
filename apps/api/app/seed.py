@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from .models import Agent, Policy, PolicyEffect, ProtectedResource, Tool, User, Role
+from .models import Agent, Policy, PolicyEffect, PolicyVersion, ProtectedResource, Role, Tool, User
 
 
 def seed_demo_data(session: Session) -> None:
@@ -16,8 +16,18 @@ def seed_demo_data(session: Session) -> None:
     session.add_all(users)
     session.commit()
 
-    support = Agent(name="customer-support-agent", purpose="Answer customer service questions and prepare workflow requests", owner_email="admin@demo.local", risk_level="medium")
-    finance = Agent(name="finance-ops-agent", purpose="Prepare finance operations such as refund requests", owner_email="admin@demo.local", risk_level="high")
+    support = Agent(
+        name="customer-support-agent",
+        purpose="Answer customer service questions and prepare workflow requests",
+        owner_email="admin@demo.local",
+        risk_level="medium",
+    )
+    finance = Agent(
+        name="finance-ops-agent",
+        purpose="Prepare finance operations such as refund requests",
+        owner_email="admin@demo.local",
+        risk_level="high",
+    )
     session.add_all([support, finance])
     session.commit()
     session.refresh(support)
@@ -30,14 +40,21 @@ def seed_demo_data(session: Session) -> None:
         ProtectedResource(name="customer_transactions", classification="restricted", owner_team="finance"),
         ProtectedResource(name="refund_execution", classification="restricted", owner_team="finance"),
     ])
+    session.commit()
 
-    session.add_all([
+    policies = [
         Policy(
             name="Support may read customer profiles in sandbox",
             description="Customer support agent can read low-risk profile data in non-production workflows.",
             effect=PolicyEffect.allow,
             priority=200,
-            conditions={"agent_name": "customer-support-agent", "resource_name": "customer_profile", "action": "read", "environment": "sandbox"},
+            conditions={
+                "agent_name": "customer-support-agent",
+                "resource_name": "customer_profile",
+                "action": "read",
+                "environment": "sandbox",
+            },
+            created_by_email="admin@demo.local",
         ),
         Policy(
             name="Transaction data requires approval",
@@ -45,6 +62,20 @@ def seed_demo_data(session: Session) -> None:
             effect=PolicyEffect.requires_approval,
             priority=300,
             conditions={"resource_name": "customer_transactions", "action": "read"},
+            created_by_email="admin@demo.local",
+        ),
+        Policy(
+            name="Large refund execution requires approval",
+            description="Refund execution at or above USD 500 requires human approval.",
+            effect=PolicyEffect.requires_approval,
+            priority=450,
+            conditions={
+                "agent_name": "finance-ops-agent",
+                "resource_name": "refund_execution",
+                "action": "execute",
+                "context.amount": {"$gte": 500},
+            },
+            created_by_email="admin@demo.local",
         ),
         Policy(
             name="Refund execution requires approval",
@@ -52,13 +83,35 @@ def seed_demo_data(session: Session) -> None:
             effect=PolicyEffect.requires_approval,
             priority=400,
             conditions={"resource_name": "refund_execution", "action": "execute"},
+            created_by_email="admin@demo.local",
         ),
         Policy(
             name="Deny production access by default for support agent",
-            description="Support agent is not allowed to directly access restricted resources in production.",
+            description="Support agent is not allowed to directly access protected resources in production.",
             effect=PolicyEffect.deny,
             priority=500,
             conditions={"agent_name": "customer-support-agent", "environment": "production"},
+            created_by_email="admin@demo.local",
         ),
-    ])
+    ]
+    session.add_all(policies)
+    session.commit()
+
+    for policy in policies:
+        session.refresh(policy)
+        session.add(
+            PolicyVersion(
+                organization_id=policy.organization_id,
+                policy_id=policy.id,
+                version=policy.version,
+                name=policy.name,
+                description=policy.description,
+                effect=policy.effect,
+                priority=policy.priority,
+                active=policy.active,
+                conditions=policy.conditions,
+                changed_by_email=policy.created_by_email,
+                change_summary="Initial seeded policy version",
+            )
+        )
     session.commit()

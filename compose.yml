@@ -1,18 +1,53 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agentguard
+      POSTGRES_USER: agentguard
+      POSTGRES_PASSWORD: agentguard_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentguard -d agentguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
   api:
     build: ./apps/api
     environment:
-      DATABASE_URL: sqlite:///./agentguard.db
+      DATABASE_URL: postgresql+psycopg://agentguard:agentguard_dev_password@db:5432/agentguard
       API_CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      ENVIRONMENT: development
+      SEED_DEMO_DATA: "true"
     ports:
       - "8000:8000"
     volumes:
       - ./apps/api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   web:
     build: ./apps/web
     environment:
       VITE_API_BASE_URL: http://localhost:8000/api/v1
     ports:
       - "5173:5173"
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  web_node_modules:
