@@ -1,52 +1,90 @@
-# Architecture
+# AgentGuard Architecture — Sprint 2
 
 ## System Context
 
 ```mermaid
 flowchart LR
-  User[Admin / Developer / Approver / Auditor] --> Web[React Web App]
-  Web --> API[FastAPI Backend]
-  API --> DB[(PostgreSQL / SQLite Demo)]
-  API --> Policy[Policy Engine]
-  API --> Assistant[AI Explanation Adapter]
-  API --> Audit[Audit Event Writer]
+  User[Admin / Developer / Approver / Auditor] --> Web[React + TypeScript]
+  Web --> API[FastAPI Governance API]
+  Agent[Future AI Agent / MCP Adapter] -. Sprint 3 .-> API
+  API --> Registry[Agent, Tool, Resource Registry]
+  API --> Policy[Deterministic Policy Engine]
+  API --> Approval[Approval Queue Preview]
+  API --> Audit[Audit and Export Service]
+  API --> DB[(PostgreSQL 16)]
+  API -. optional fallback .-> SQLite[(SQLite)]
+  API -. later sprint .-> Assistant[LLM Explanation Adapter]
 ```
 
-## Main Design Decision
+## Main Principle
 
-AgentGuard separates deterministic authorization from AI-generated explanations.
+Authorization is deterministic. An LLM may explain a completed decision in a later sprint, but it cannot decide whether an action is allowed.
 
-- The policy engine decides `allow`, `deny`, or `requires_approval`.
-- The assistant only explains the completed decision.
-- Every decision and approval action creates an audit event.
+## Request Flow
 
-## Core Components
+```mermaid
+sequenceDiagram
+  participant U as User / Future Agent
+  participant API as FastAPI
+  participant R as Registry
+  participant P as Policy Engine
+  participant DB as PostgreSQL
+  participant A as Audit Service
 
-| Component | Responsibility |
+  U->>API: Submit action request
+  API->>R: Validate active agent and resource
+  R-->>API: Registry context
+  API->>P: Evaluate active policies
+  P-->>API: Allow / Deny / Requires Approval
+  API->>DB: Store request and optional approval
+  API->>A: Write correlated audit event
+  A->>DB: Persist audit evidence
+  API-->>U: Decision + reason + correlation ID
+```
+
+## Components
+
+| Component | Sprint 2 responsibility |
 |---|---|
-| React Web App | Dashboard, simulator, policies, approvals, audit views |
-| FastAPI Backend | API orchestration, validation, RBAC, business logic |
-| SQL Database | Stores users, agents, tools, resources, policies, approvals, and audits |
-| Policy Engine | Deterministic authorization decisions |
-| Approval Workflow | Human-in-the-loop review for sensitive actions |
-| Assistant Adapter | Plain-language explanations and incident summaries |
-| CI/CD | Automated tests, builds, and deployment evidence |
+| React Web App | Role demo, policy creation/status, simulator, approvals preview, audit filters and exports |
+| FastAPI API | Validation, RBAC, orchestration, OpenAPI documentation |
+| PostgreSQL | Primary system of record for registries, policies, versions, requests, approvals, and audits |
+| Alembic | Repeatable versioned schema changes |
+| Policy Engine | Priority, tie-breaking, context operators, and default deny |
+| Audit Service | Correlated events, filtering, CSV/JSON export |
+| CI | PostgreSQL migration and backend tests; Yarn frontend build |
+
+## Policy Conflict Resolution
+
+1. Evaluate active policies within the current organization.
+2. Keep only matching policies.
+3. Choose the highest numeric priority.
+4. At equal priority, `deny` outranks `requires_approval`, which outranks `allow`.
+5. Apply default deny when no policy matches.
+
+## Multi-Agent Extensibility
+
+AgentGuard does not claim universal native support for every agent framework. It defines a normalized request contract containing:
+
+- Agent identity
+- Requesting user
+- Action
+- Protected resource
+- Environment
+- Context attributes
+
+Future agent or MCP adapters translate their native tool call into this contract. Sprint 3 can add one reference integration without changing the core policy model.
 
 ## Architecture Patterns
 
-- Layered architecture.
-- Repository-ready API routing by domain.
-- Policy adapter pattern.
-- Default-deny access model.
-- Audit-log pattern.
+- Layered application architecture.
+- Adapter boundary for policy engines and future agents.
+- Default-deny security model.
+- Append-oriented audit pattern.
 - Human-in-the-loop workflow.
+- Database migration pattern.
+- Organization-scoped data access.
 
-## Deployment Options
+## Database Decision
 
-| Option | Pros | Cons |
-|---|---|---|
-| Render/Railway | Fast setup, low cost, simple demos | Free tiers can sleep |
-| Fly.io | Good Docker support | Slightly more setup |
-| AWS ECS/Fargate | Enterprise-grade | Higher setup and cost |
-
-Recommended capstone option: Render or Railway for speed and reviewer accessibility.
+SQLite reduced friction during Sprint 1. PostgreSQL is adopted from Sprint 2 because it better supports concurrent users, relational integrity, JSON policy context, audit filtering, CI parity, and managed cloud deployment. SQLite remains a documented fallback for isolated development only.

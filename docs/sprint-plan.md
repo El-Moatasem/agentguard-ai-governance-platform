@@ -1,143 +1,98 @@
 # AgentGuard Solo Capstone Sprint Plan
 
-This timeline is designed for a solo MSSE capstone and maps the work into the required agile sprint structure. The goal is to produce a working deployed software/AI system, a GitHub repository, a task board, a design/testing document, and a 15-20 minute final demo.
+This plan organizes the project into four development sprints plus final submission preparation. The official task board should contain the detailed stories, tasks, evidence, and status history.
 
-## Roles
+## Solo Roles
 
 | Role | Owner |
 |---|---|
 | Product Owner | El-Moatasem Madani |
 | Scrum Master | El-Moatasem Madani |
-| Backend Code Owner | El-Moatasem Madani |
-| Frontend Code Owner | El-Moatasem Madani |
-| QA / Release Owner | El-Moatasem Madani |
+| Backend / Frontend Code Owner | El-Moatasem Madani |
+| QA and Release Owner | El-Moatasem Madani |
 
-## Week 1-2: Project Conception and Setup
+## Project Conception — Weeks 1–2
 
-**Goals**
-- Confirm problem statement and scope.
-- Create repository and task board.
-- Define MVP, stretch goals, and risk boundaries.
-- Produce initial architecture and user stories.
+- Confirm problem, users, value, scope, exclusions, and risks.
+- Create repository and official agile board.
+- Produce architecture, ADRs, product backlog, and Definition of Done.
 
-**Deliverables**
-- README draft.
-- Product backlog.
-- Architecture diagram.
-- Definition of Done.
-- Sprint 1 plan.
+## Sprint 1 — Weeks 3–5: Foundation and Registry
 
-## Sprint 1 — Weeks 3-5: Foundation and Registry
+**Status:** Foundation implemented; verify and attach your own evidence before marking the board Done.
 
-**Sprint Goal**
-Build the foundation for the platform: authentication, agent registry, resource registry, database, and CI.
+**Goal:** Establish authentication/RBAC, agent/tool/resource registries, React/FastAPI foundations, local execution, Docker, CI, and initial tests.
 
-**User Stories**
-- As an admin, I can authenticate using a demo token.
-- As an admin, I can register and view AI agents.
-- As an admin, I can register protected resources and tools.
-- As a developer, I can view registered agents and resources.
+**Evidence:**
 
-**Engineering Tasks**
-- FastAPI project structure.
-- SQLModel database models.
-- Seed demo data.
-- React dashboard skeleton.
-- Docker Compose setup.
-- GitHub Actions backend and frontend workflows.
+- `sprints/sprint_1/Sprint_1_User_Stories_and_Tasks.md`
+- `sprints/sprint_1/AgentGuard_Sprint1_Release_Notes.md`
+- `sprints/sprint_1/jira_import_sprint_1.csv`
 
-**Sprint Demo**
-- Start the app.
-- Show authentication and dashboard.
-- Show agent/resource/tool registry.
-- Show CI checks.
+## Sprint 2 — Weeks 6–8: Policy Engine, PostgreSQL, and Audit Trail
 
-## Sprint 2 — Weeks 6-8: Policy Engine and Audit Trail
+**Status:** v0.2.0 release candidate generated; keep Jira items In Review until locally verified.
 
-**Sprint Goal**
-Evaluate agent requests against deterministic policies and audit every decision.
+**Goal:** Adopt PostgreSQL and Alembic, implement versioned contextual policies, persist decisions, add correlation and query APIs, and provide searchable/exportable audit evidence.
 
-**User Stories**
-- As an admin, I can create a policy.
-- As a developer, I can simulate an agent action.
-- As an auditor, I can review allowed, denied, and approval-required decisions.
+**Evidence:**
 
-**Engineering Tasks**
-- Policy model and API.
-- Deterministic policy evaluator.
-- Request simulator endpoint.
-- Audit event persistence.
-- Dashboard metrics.
-- Unit tests for policy matching and default-deny behavior.
+- `sprints/sprint_2/Sprint_2_User_Stories_and_Tasks.md`
+- `sprints/sprint_2/AgentGuard_Sprint2_Release_Notes.md`
+- `sprints/sprint_2/Sprint_2_Demo_Script.md`
+- `sprints/sprint_2/jira_import_sprint_2.csv`
 
-**Sprint Demo**
-- Create policies.
-- Run allow, deny, and approval-required examples.
-- Show audit records and tests.
+## Sprint 3 — Weeks 9–11: Human Approval, Real Agent/MCP, and AI Explanation
 
-## Sprint 3 — Weeks 9-11: Human Approval and AI Explanation
+**Goal:** Complete human-in-the-loop behavior and prove AgentGuard can govern one real agent/tool integration.
 
-**Sprint Goal**
-Add human-in-the-loop approval and AI-supported explanations.
+**Planned stories:**
 
-**User Stories**
-- As an approver, I can approve or reject sensitive requests.
-- As an auditor, I can see who approved or rejected a request.
-- As a developer, I can ask for a plain-language explanation of a policy decision.
+- Prevent a requester from approving their own request.
+- Add approval expiry, review details, and execution state.
+- Resume or execute an approved action through a safe mock or test integration.
+- Integrate one agent framework and one MCP provider or local MCP server.
+- Govern two or three non-destructive test tools.
+- Connect an optional LLM explanation adapter with structured output and grounding.
+- Test that AI output cannot change the policy decision.
 
-**Engineering Tasks**
-- Approval queue.
-- Approval/rejection APIs.
-- Audit events for review actions.
-- Assistant explanation endpoint.
-- Tests for approval transitions.
-- Guardrail: AI cannot override policy decisions.
+## Sprint 4 — Weeks 12–13: Hardening, Deployment, and Documentation
 
-**Sprint Demo**
-- Simulate a restricted transaction request.
-- Approve the pending request.
-- Show audit trail and explanation.
+**Goal:** Stabilize the architecture already selected rather than introducing major database or framework changes.
 
-## Sprint 4 — Weeks 12-13: Hardening, Deployment, and Documentation
+**Planned stories:**
 
-**Sprint Goal**
-Prepare the final capstone submission and deployed demo.
+- Complete RBAC, organization-isolation, security, and malformed-input tests.
+- Add rate limiting, structured logging, and health/readiness checks.
+- Run performance and recovery tests.
+- Deploy API, frontend, and managed PostgreSQL.
+- Complete architecture, design/testing, threat-model, deployment, and cost documentation.
+- Freeze MVP scope and complete regression testing.
 
-**User Stories**
-- As a reviewer, I can run the project locally from the README.
-- As a reviewer, I can open the deployed application.
-- As a reviewer, I can inspect tests, architecture, and CI evidence.
+## Week 14 — Final Submission
 
-**Engineering Tasks**
-- Finish documentation.
-- Add security review and threat model.
-- Run full regression tests.
-- Deploy backend and frontend.
-- Test production environment.
-- Freeze MVP scope.
+- Record the 15–20 minute final demonstration.
+- Verify repository and task-board permissions.
+- Share the repository with `quantic-grader`.
+- Confirm deployed application and video links work in an incognito browser.
+- Submit the required links and signed group agreement page if applicable.
 
-**Sprint Demo**
-- Complete end-to-end run from login to audit.
-- Show deployment link.
-- Show test and CI evidence.
+## Database Evolution
 
-## Week 14: Final Submission
-
-**Tasks**
-- Record final 15-20 minute demo.
-- Share repository with `quantic-grader`.
-- Confirm task board is accessible.
-- Confirm deployed app link works.
-- Confirm Google Drive demo video permissions.
-- Submit all links through the Quantic dashboard.
+| Sprint | Database plan |
+|---|---|
+| Sprint 1 | SQLite is acceptable for the initial prototype and basic demonstration. |
+| Sprint 2 | PostgreSQL becomes primary; add Alembic migrations, constraints, indexes, and seed scripts. |
+| Sprint 3 | Build approvals, agent/MCP integration, and audit workflows using PostgreSQL. |
+| Sprint 4 | Test, optimize, secure, deploy, and document without changing the main database architecture. |
 
 ## Definition of Done
 
-A task is Done when:
+A board item is Done only when:
 
-- The feature works locally.
-- API behavior is tested when applicable.
-- UI work has a screenshot or demo evidence.
-- Documentation is updated.
-- No known critical defect remains.
-- Work is linked to a GitHub issue or board card.
+- Acceptance criteria are demonstrated.
+- Applicable automated tests pass.
+- Code and documentation are committed.
+- The board item links to evidence.
+- No known critical defect blocks the feature.
+- The work reflects your actual implementation and review process.
