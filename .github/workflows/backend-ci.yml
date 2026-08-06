@@ -1,21 +1,77 @@
 name: Backend CI
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - Sprint-1
+      - Sprint-2
+
+  pull_request:
+    branches:
+      - main
+      - develop
+      - Sprint-2
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: agentguard_test
+          POSTGRES_USER: agentguard
+          POSTGRES_PASSWORD: agentguard_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U agentguard -d agentguard_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test
+      ENVIRONMENT: test
+      SEED_DEMO_DATA: "false"
+
     defaults:
       run:
         working-directory: apps/api
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt
-      - run: pytest -q
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify PostgreSQL connection
+        run: |
+          python - <<'PY'
+          from sqlalchemy import create_engine, text
+          import os
+
+          engine = create_engine(os.environ["DATABASE_URL"])
+
+          with engine.connect() as connection:
+              print(connection.execute(text("SELECT current_database()")).scalar())
+          PY
+
+      - name: Apply Alembic migrations
+        run: |
+          alembic upgrade head
+          alembic current
+
+      - name: Run tests
+        run: pytest -q
