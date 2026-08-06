@@ -1,0 +1,26 @@
+Issue ID,Summary,Issue Type,Parent ID,Description,Priority,Labels,Story Points,Acceptance Criteria
+100,AG Sprint 1 — Foundation and Registry,Epic,,Create the runnable AgentGuard foundation and registry capabilities.,Highest,"capstone,sprint-1",,
+110,Define project scope and architecture,Story,100,"Document the MVP, users, assumptions, architecture, ADRs, and Definition of Done.",Highest,"capstone,sprint-1,architecture,documentation",5,"Scope, architecture, assumptions, and exclusions are documented."
+111,Create project charter and bounded MVP,Sub-task,110,"Write the problem statement, target users, MVP, exclusions, and stretch goals.",High,documentation,,
+112,Create architecture diagrams and ADRs,Sub-task,110,"Document system context, components, deterministic authorization, and default deny.",High,"architecture,documentation",,
+120,Establish repository and engineering workflow,Story,100,"Create the monorepo, templates, CI workflows, and official task board.",Highest,"capstone,sprint-1,devops",5,Repository and CI structure are documented and runnable.
+121,Create monorepo and repository standards,Sub-task,120,"Add apps, docs, policy, data, scripts, contributing, security, and ownership files.",High,"devops,documentation",,
+122,Configure backend and frontend CI,Sub-task,120,Add GitHub Actions for backend tests and frontend build.,High,"devops,testing",,
+130,Implement demonstration authentication and RBAC,Story,100,"Add demo users, bearer tokens, authentication endpoints, and role restrictions.",Highest,"capstone,sprint-1,backend,security",5,Protected endpoints enforce the four demonstration roles.
+131,Implement user and role models,Sub-task,130,"Create admin, developer, approver, and auditor user records.",High,"backend,security",,
+132,Implement bearer-token security dependencies,Sub-task,130,Resolve active users and enforce allowed roles.,High,"backend,security",,
+140,Build AI-agent registry,Story,100,Allow administrators to register agents and authorized users to view them.,High,"capstone,sprint-1,backend",5,Agents are organization scoped and contain ownership and risk metadata.
+141,Create agent model and schemas,Sub-task,140,"Add agent identity, purpose, owner, risk, status, and timestamps.",High,"backend,database",,
+142,Add agent create and list endpoints,Sub-task,140,"Implement API routes, validation, and seeded examples.",High,backend,,
+150,Build tool and resource registries,Story,100,Register protected resources and tools linked to agents.,High,"capstone,sprint-1,backend",5,Tools and resources are organization scoped and role protected.
+151,Implement protected-resource registry,Sub-task,150,"Add model, create/list APIs, classification, and owner team.",High,"backend,database",,
+152,Implement agent-tool registry,Sub-task,150,"Add linked tool records, endpoints, actions, and agent validation.",High,"backend,database",,
+160,Provide initial governance dashboard,Story,100,Create the React dashboard and typed API client.,High,"capstone,sprint-1,frontend",5,The web app displays the foundation and calls the API.
+161,Create React TypeScript application,Sub-task,160,"Set up Vite, API client, and environment configuration.",High,frontend,,
+162,Build initial dashboard and responsive layout,Sub-task,160,"Display metrics, agents, and demonstration controls.",High,frontend,,
+170,Make local execution reproducible,Story,100,Provide Docker and non-Docker execution paths.,High,"capstone,sprint-1,devops,documentation",3,A reviewer can run the project from documented commands.
+171,Add Dockerfiles and Docker Compose,Sub-task,170,Containerize API and web services.,High,devops,,
+172,Document Yarn and Python setup,Sub-task,170,"Write local running, reset, and troubleshooting instructions.",High,documentation,,
+180,Test and demonstrate Sprint 1 foundation,Story,100,"Create automated tests, release notes, and demonstration evidence.",Highest,"capstone,sprint-1,testing,documentation",5,Tests pass and Sprint 1 evidence is available.
+181,Add backend smoke and policy tests,Sub-task,180,"Test health, auth, role access, and policy foundations.",High,"testing,backend",,
+182,Prepare Sprint 1 release notes and demo,Sub-task,180,"Record completed features, limitations, and demo steps.",High,documentation,,

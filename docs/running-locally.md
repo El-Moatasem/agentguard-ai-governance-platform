@@ -1,37 +1,58 @@
-# Running AgentGuard Locally
+# Running AgentGuard v0.2.0 Locally
+
+## Recommended Environment
+
+Use Docker Compose for the complete Sprint 2 environment because it starts PostgreSQL, applies Alembic migrations, starts FastAPI, and runs the React frontend.
 
 ## Prerequisites
 
+- Docker Desktop with Docker Compose, or:
 - Python 3.11 or newer
 - Node.js 20 or newer
-- npm
-- Docker Desktop with Docker Compose, if using the container option
+- Yarn 1.22 through Corepack
+- PostgreSQL 16 when not using Docker and when testing the primary architecture
 
-## Option A: Docker Compose
+## Option A — Docker Compose with PostgreSQL
 
 From the repository root:
 
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
-Open:
+Services:
 
-- Frontend: http://localhost:5173
-- API documentation: http://localhost:8000/docs
-- API health check: http://localhost:8000/health
+| Service | Address |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| API | `http://localhost:8000` |
+| Swagger | `http://localhost:8000/docs` |
+| Health | `http://localhost:8000/health` |
+| PostgreSQL | `localhost:5432` |
 
-Stop the project with `Ctrl+C`, then run:
+Stop services:
 
 ```bash
 docker compose down
 ```
 
-## Option B: Run the Backend and Frontend Separately
+Remove the local database volume and rebuild from migrations:
 
-### Backend
+```bash
+docker compose down -v
+docker compose up --build
+```
 
-From the repository root:
+## Option B — Manual PostgreSQL Development
+
+Create a PostgreSQL database and export a connection string:
+
+```bash
+export DATABASE_URL=postgresql+psycopg://agentguard:YOUR_PASSWORD@localhost:5432/agentguard
+```
+
+Run the backend:
 
 ```bash
 cd apps/api
@@ -39,32 +60,46 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-On Windows PowerShell, activate the environment with:
+## Option C — Lightweight SQLite Fallback
 
-```powershell
-.venv\Scripts\Activate.ps1
+SQLite is retained for isolated development or test convenience, not as the final production database.
+
+```bash
+cd apps/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export DATABASE_URL=sqlite:///./agentguard.db
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-The backend automatically creates the SQLite database and inserts demo data on first startup.
+Reset SQLite:
 
-### Frontend
+```bash
+rm -f agentguard.db
+alembic upgrade head
+```
 
-Open a second terminal from the repository root:
+## Frontend with Yarn
+
+In a separate terminal:
 
 ```bash
 cd apps/web
-npm ci
-npm run dev
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+yarn install --frozen-lockfile
+yarn dev
 ```
 
-Open http://localhost:5173.
+Do not commit both `package-lock.json` and `yarn.lock`. AgentGuard uses `yarn.lock`.
 
 ## Demo Tokens
-
-The frontend defaults to `admin-token`. Other available tokens are:
 
 ```text
 admin-token
@@ -73,52 +108,65 @@ approver-token
 auditor-token
 ```
 
-To switch the active demo user, open the browser console and run:
+## Database Access
 
-```javascript
-localStorage.setItem("agentguard_token", "approver-token");
-location.reload();
+### Docker PostgreSQL shell
+
+```bash
+docker compose exec db psql -U agentguard -d agentguard
+```
+
+Useful commands:
+
+```sql
+\dt
+SELECT id, name, effect, priority, active, version FROM policy ORDER BY priority DESC;
+SELECT correlation_id, agent_name, action, resource_name, decision FROM actionrequest ORDER BY created_at DESC;
+SELECT event_type, result, actor_email, created_at FROM auditevent ORDER BY created_at DESC;
+\q
+```
+
+### Migration commands
+
+```bash
+cd apps/api
+alembic current
+alembic history
+alembic upgrade head
 ```
 
 ## Verification
 
-Run the backend tests:
+Backend tests:
 
 ```bash
 cd apps/api
 pytest -q
 ```
 
-Build the frontend:
+Frontend build:
 
 ```bash
 cd apps/web
-npm ci
-npm run build
+yarn build
 ```
-
-Expected backend test result for the starter version: `6 passed`.
-
-## Reset Demo Data
-
-Stop the API and remove the local SQLite file:
-
-```bash
-rm -f apps/api/agentguard.db
-```
-
-Restart the API. The application will recreate and seed the database.
 
 ## Common Problems
 
-### Port already in use
+### Port 5432 already in use
 
-Stop the process using ports `8000` or `5173`, or start the service on a different port. If the API port changes, set `VITE_API_BASE_URL` before starting the frontend.
+Stop the existing PostgreSQL service or change the Docker host port while keeping the container port at 5432.
+
+### Existing Sprint 1 schema conflicts
+
+Sprint 2 adds a formal migration baseline and new required columns. Reset the local development database:
+
+```bash
+docker compose down -v
+```
+
+or remove the SQLite database and rerun `alembic upgrade head`.
 
 ### Frontend cannot reach the API
 
-Confirm that the API health endpoint works at http://localhost:8000/health and that CORS includes http://localhost:5173.
-
-### Docker command not found
-
-Install and start Docker Desktop, or use the manual backend/frontend steps instead.
+Confirm that `http://localhost:8000/health` works and that `VITE_API_BASE_URL` points to `http://localhost:8000/api/v1`.
