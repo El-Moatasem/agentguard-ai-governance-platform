@@ -1,0 +1,32 @@
+Issue ID,Summary,Issue Type,Parent ID,Description,Priority,Labels,Story Points,Acceptance Criteria
+200,"AG Sprint 2 — Policy Engine, PostgreSQL, and Audit Trail",Epic,,"Deliver the PostgreSQL-backed, versioned policy and audit release.",Highest,"capstone,sprint-2",,
+210,Adopt PostgreSQL and versioned migrations,Story,200,"Add PostgreSQL 16, Psycopg, Alembic, constraints, indexes, and repeatable setup.",Highest,"capstone,sprint-2,database,devops",8,Docker and CI apply the migration successfully against PostgreSQL.
+211,Add PostgreSQL Docker service and health checks,Sub-task,210,"Configure database credentials, volume, network dependency, and health checks.",Highest,"database,devops",,
+212,Create Alembic baseline migration,Sub-task,210,Create the complete Sprint 2 schema migration and downgrade path.,Highest,database,,
+213,Add constraints and query indexes,Sub-task,210,"Add foreign keys, uniqueness constraints, correlation and audit indexes.",High,database,,
+220,Manage and version policies,Story,200,Create full policy lifecycle APIs and immutable version snapshots.,Highest,"capstone,sprint-2,backend,policy-engine",8,Policy versions and status changes are traceable and audited.
+221,Implement PolicyVersion persistence,Sub-task,220,Store versioned policy snapshots with editor and change summary.,High,"backend,database",,
+222,Implement policy lifecycle APIs,Sub-task,220,"Create get, update, versions, activate, and deactivate endpoints.",Highest,"backend,policy-engine",,
+223,Audit policy lifecycle events,Sub-task,220,"Write creation, update, activation, and deactivation events.",High,"audit,backend",,
+230,Evaluate contextual policies deterministically,Story,200,"Add explicit tie-breaking, nested context, operators, validation, and dry runs.",Highest,"capstone,sprint-2,policy-engine,backend",8,The engine produces predictable outcomes and defaults to deny.
+231,Implement conflict-resolution rules,Sub-task,230,Apply priority and deny/approval/allow precedence.,Highest,policy-engine,,
+232,Add nested context and comparison operators,Sub-task,230,"Support context paths and equality, membership, range, and containment operators.",High,policy-engine,,
+233,Validate policy keys and add dry-run endpoint,Sub-task,230,Reject unsupported conditions and evaluate without persistence.,High,"backend,policy-engine",,
+240,Persist and query action requests,Story,200,Store evaluated requests and provide traceable query APIs.,Highest,"capstone,sprint-2,backend,audit",8,Requests have correlation IDs and can be retrieved by authorized roles.
+241,Add correlation IDs and request metadata,Sub-task,240,"Store decision inputs, outputs, matched policy, and evaluated count.",High,"backend,database",,
+242,Validate registered agents and resources,Sub-task,240,Reject unknown or inactive agents and missing resources.,High,"backend,security",,
+243,Add request list and detail endpoints,Sub-task,240,Support organization-scoped retrieval and filters.,High,backend,,
+250,Provide searchable and exportable audit evidence,Story,200,Filter governance events and export CSV or JSON.,Highest,"capstone,sprint-2,audit,backend",8,Auditors can filter and export organization-scoped events.
+251,Add correlation-aware audit filtering,Sub-task,250,"Filter by result, event type, actor, and correlation ID.",High,"audit,backend",,
+252,Implement CSV and JSON exports,Sub-task,250,Generate downloadable audit evidence in both formats.,High,"audit,backend",,
+260,Extend dashboard and policy UI,Story,200,"Add role switching, policy creation, simulator, metrics, and audit controls.",High,"capstone,sprint-2,frontend",8,Sprint 2 capabilities are accessible through a responsive interface.
+261,Add policy and simulation forms,Sub-task,260,Create custom policy and action-request interfaces.,High,"frontend,policy-engine",,
+262,Add audit filters and export controls,Sub-task,260,Expose filtering and downloads in the web app.,High,"frontend,audit",,
+263,Add role switcher and decision details,Sub-task,260,Demonstrate RBAC and show matched policy and correlation data.,High,"frontend,security",,
+270,Strengthen CI and automated testing,Story,200,Run migrations and expanded tests in CI and build the frontend with Yarn.,Highest,"capstone,sprint-2,testing,devops",8,"Migration, backend tests, and frontend build are automated."
+271,Provision PostgreSQL in backend CI,Sub-task,270,"Add service container, migration execution, and test database configuration.",Highest,"testing,devops,database",,
+272,Expand Sprint 2 automated tests,Sub-task,270,"Cover policy lifecycle, engine rules, requests, audits, exports, and RBAC.",Highest,testing,,
+273,Use Yarn in frontend CI,Sub-task,270,Install from yarn.lock and run the production build.,High,"frontend,devops",,
+280,Document and demonstrate Sprint 2,Story,200,"Update documentation, release notes, and demo evidence.",Highest,"capstone,sprint-2,documentation",5,"A reviewer can understand, run, test, and demonstrate the release."
+281,"Update README, architecture, and test docs",Sub-task,280,"Reflect PostgreSQL, migrations, versioned policies, and audit exports.",High,documentation,,
+282,Create release notes and demo checklist,Sub-task,280,"Document changes, verification, limitations, and demo flow.",High,documentation,,
