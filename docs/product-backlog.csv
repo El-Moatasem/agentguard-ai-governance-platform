@@ -1,14 +1,23 @@
-Sprint,Epic,User Story,Acceptance Criteria,Priority,Status
-1,Foundation,"As an admin, I can authenticate with a demo token","Token grants correct role and invalid token is rejected",High,Ready
-1,Registry,"As an admin, I can register AI agents","Agent appears in registry and persists",High,Ready
-1,Registry,"As an admin, I can register protected resources","Resource appears in registry and can be referenced by policies",High,Ready
-1,DevOps,"As a reviewer, I can run tests in CI","GitHub Actions workflow runs pytest",High,Ready
-2,Policy,"As an admin, I can create allow/deny/approval policies","Policy accepts conditions and effect",High,Ready
-2,Policy,"As a developer, I can simulate an agent request","Simulator returns decision and reason",High,Ready
-2,Audit,"As an auditor, I can view decision events","Decision creates searchable audit event",High,Ready
-3,Approval,"As an approver, I can approve a sensitive request","Pending approval changes to approved and audit is written",High,Ready
-3,Approval,"As an approver, I can reject a sensitive request","Pending approval changes to rejected and audit is written",High,Ready
-3,AI,"As a developer, I can request a plain-English decision explanation","Explanation reflects deterministic decision and includes safety note",Medium,Ready
-4,Hardening,"As a reviewer, I can inspect design and testing decisions","Design/testing doc is complete",High,Ready
-4,Deployment,"As a reviewer, I can access the deployed app","Production link loads and demo workflow works",High,Ready
-4,Presentation,"As a reviewer, I can watch a complete demo","Recording is 15-20 minutes and shows all major workflows",High,Ready
+ID,Sprint,Epic,User Story,Priority,Status,Acceptance Summary
+AG-S1-01,1,Foundation,"Define project scope and architecture",Highest,Done,"MVP, roles, assumptions, architecture and ADRs documented"
+AG-S1-02,1,Engineering Workflow,"Establish repository and CI workflow",Highest,Done,"Monorepo, templates, board and CI foundation available"
+AG-S1-03,1,Security,"Implement demonstration authentication and RBAC",Highest,Done,"Four roles and protected routes demonstrated"
+AG-S1-04,1,Registry,"Build AI-agent registry",High,Done,"Organization-scoped agents can be registered and listed"
+AG-S1-05,1,Registry,"Build tool and protected-resource registries",High,Done,"Tools and resources can be registered and viewed"
+AG-S1-06,1,Frontend,"Provide initial governance dashboard",High,Done,"React application shows foundation data"
+AG-S1-07,1,DevOps,"Make local execution reproducible",High,Done,"Docker and manual setup documented"
+AG-S1-08,1,Quality,"Test and demonstrate Sprint 1 foundation",Highest,Done,"Initial tests, notes and demo material available"
+AG-S2-01,2,Database,"Adopt PostgreSQL and versioned migrations",Highest,In Review,"PostgreSQL, Alembic, constraints and indexes implemented"
+AG-S2-02,2,Policy,"Manage and version policies",Highest,In Review,"Policy lifecycle and version history implemented"
+AG-S2-03,2,Policy Engine,"Evaluate contextual policies deterministically",Highest,In Review,"Priority, tie-breaking, context operators and default deny implemented"
+AG-S2-04,2,Decisions,"Persist and query action requests",Highest,In Review,"Correlation IDs, validation, list and detail APIs implemented"
+AG-S2-05,2,Audit,"Provide searchable and exportable audit evidence",Highest,In Review,"Filters and CSV/JSON export implemented"
+AG-S2-06,2,Frontend,"Extend dashboard and policy UI",High,In Review,"Role, policy, simulator and audit workflows implemented"
+AG-S2-07,2,Quality,"Strengthen CI and automated testing",Highest,In Review,"PostgreSQL CI and 19 backend tests implemented"
+AG-S2-08,2,Documentation,"Document and demonstrate Sprint 2",Highest,In Review,"Release notes, stories, Jira CSV and demo script available"
+AG-S3-01,3,Approvals,"Complete human approval lifecycle",Highest,Backlog,"Self-approval protection, expiry and execution resume"
+AG-S3-02,3,Agent Integration,"Integrate one real agent and MCP provider",Highest,Backlog,"Governed reference tool invocation with audit evidence"
+AG-S3-03,3,AI Explanation,"Connect a grounded explanation provider",High,Backlog,"LLM explains but cannot override decisions"
+AG-S4-01,4,Hardening,"Complete security, performance and recovery testing",Highest,Backlog,"Final quality evidence complete"
+AG-S4-02,4,Deployment,"Deploy production application",Highest,Backlog,"Accessible deployed URL and managed PostgreSQL"
+AG-S4-03,4,Submission,"Complete final documentation and presentation",Highest,Backlog,"Repository, board, design/testing and 15–20 minute demo ready"

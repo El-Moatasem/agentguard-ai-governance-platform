@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session
@@ -7,7 +8,23 @@ from .routers import agents, approvals, assistant, audit, auth, decisions, polic
 from .seed import seed_demo_data
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, version="0.1.0")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    if settings.seed_demo_data:
+        with Session(engine, expire_on_commit=False) as session:
+            seed_demo_data(session)
+    yield
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="Deterministic governance, policy evaluation, approvals, and auditability for AI agents.",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,16 +35,25 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
-    with Session(engine) as session:
-        seed_demo_data(session)
+@app.get("/")
+def root():
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "status": "running",
+        "documentation": "/docs",
+        "health": "/health",
+    }
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "agentguard-api"}
+    return {
+        "status": "ok",
+        "service": "agentguard-api",
+        "version": settings.app_version,
+        "environment": settings.environment,
+    }
 
 
 for router in [auth.router, agents.router, policies.router, decisions.router, approvals.router, audit.router, assistant.router]:
