@@ -1,4 +1,5 @@
 from sqlmodel import Session, select
+
 from .models import Agent, Policy, PolicyEffect, PolicyVersion, ProtectedResource, Role, Tool, User
 
 
@@ -18,13 +19,13 @@ def seed_demo_data(session: Session) -> None:
 
     support = Agent(
         name="customer-support-agent",
-        purpose="Answer customer service questions and prepare workflow requests",
+        purpose="Answer customer service questions and prepare governed workflow requests",
         owner_email="admin@demo.local",
         risk_level="medium",
     )
     finance = Agent(
         name="finance-ops-agent",
-        purpose="Prepare finance operations such as refund requests",
+        purpose="Prepare finance operations such as governed refund requests",
         owner_email="admin@demo.local",
         risk_level="high",
     )
@@ -34,11 +35,15 @@ def seed_demo_data(session: Session) -> None:
     session.refresh(finance)
 
     session.add_all([
-        Tool(agent_id=support.id, name="Customer Profile API", endpoint="/mock/customer-profile", allowed_actions=["read"]),
-        Tool(agent_id=finance.id, name="Refund API", endpoint="/mock/refunds", allowed_actions=["prepare", "execute"]),
+        Tool(agent_id=support.id, name="Customer Profile API", endpoint="mock://customer-profile", allowed_actions=["read"]),
+        Tool(agent_id=support.id, name="Team Notification MCP", endpoint="mcp://slack_send_message", allowed_actions=["send"]),
+        Tool(agent_id=support.id, name="Case Notes MCP", endpoint="mcp://append_case_note", allowed_actions=["append"]),
+        Tool(agent_id=finance.id, name="Refund API", endpoint="mock://refund", allowed_actions=["prepare", "execute"]),
         ProtectedResource(name="customer_profile", classification="internal", owner_team="support"),
         ProtectedResource(name="customer_transactions", classification="restricted", owner_team="finance"),
         ProtectedResource(name="refund_execution", classification="restricted", owner_team="finance"),
+        ProtectedResource(name="team_notifications", classification="internal", owner_team="support"),
+        ProtectedResource(name="case_notes", classification="confidential", owner_team="support"),
     ])
     session.commit()
 
@@ -52,6 +57,32 @@ def seed_demo_data(session: Session) -> None:
                 "agent_name": "customer-support-agent",
                 "resource_name": "customer_profile",
                 "action": "read",
+                "environment": "sandbox",
+            },
+            created_by_email="admin@demo.local",
+        ),
+        Policy(
+            name="Sandbox team notifications are allowed",
+            description="The support agent may send non-destructive notifications through the allowlisted MCP tool in sandbox.",
+            effect=PolicyEffect.allow,
+            priority=210,
+            conditions={
+                "agent_name": "customer-support-agent",
+                "resource_name": "team_notifications",
+                "action": "send",
+                "environment": "sandbox",
+            },
+            created_by_email="admin@demo.local",
+        ),
+        Policy(
+            name="Sandbox case notes are allowed",
+            description="The support agent may append a case note through the allowlisted MCP tool in sandbox.",
+            effect=PolicyEffect.allow,
+            priority=210,
+            conditions={
+                "agent_name": "customer-support-agent",
+                "resource_name": "case_notes",
+                "action": "append",
                 "environment": "sandbox",
             },
             created_by_email="admin@demo.local",
