@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, func, select
 from ..database import get_session
-from ..models import ActionRequest, Agent, Approval, AuditEvent, Policy, Role, User
+from ..models import ActionRequest, Agent, Approval, AuditEvent, Policy, Role, ToolExecution, User
 from ..security import require_roles
 
 router = APIRouter(tags=["audit"])
@@ -130,6 +130,7 @@ def dashboard_metrics(
         "active_policies": active_policies,
         "audit_events": count(AuditEvent),
         "pending_approvals": pending,
+        "tool_executions": count(ToolExecution),
         "decisions": {
             "allow": count_decisions("allow"),
             "deny": count_decisions("deny"),
