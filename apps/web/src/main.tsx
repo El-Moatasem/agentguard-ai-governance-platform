@@ -275,11 +275,12 @@ function App() {
     }
   }
 
-  async function reviewApproval(id: number, action: "approve" | "reject") {
+  async function reviewApproval(id: number, action: "approve" | "reject" | "expire" | "cancel") {
     try {
       await apiPost(`/approvals/${id}/${action}`, { notes: `${action}d during the AgentGuard demonstration.` });
       if (approvalModal && approvalModal.approvalId === id) {
-        setApprovalModal({ ...approvalModal, status: action === "approve" ? "approved" : "rejected" });
+        const nextStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : action === "expire" ? "expired" : "cancelled";
+        setApprovalModal({ ...approvalModal, status: nextStatus });
       }
       setNotice(`Approval request ${id} was ${action}d.`);
       await load();
@@ -540,6 +541,8 @@ function App() {
             <div className="modalActions">
               <button onClick={() => { void reviewApproval(approvalModal.approvalId, "approve"); setApprovalModal(null); }}>Approve</button>
               <button className="dangerButton" onClick={() => { void reviewApproval(approvalModal.approvalId, "reject"); setApprovalModal(null); }}>Reject</button>
+              <button className="secondary" onClick={() => { void reviewApproval(approvalModal.approvalId, "cancel"); setApprovalModal(null); }}>Cancel</button>
+              <button className="secondary" onClick={() => { void reviewApproval(approvalModal.approvalId, "expire"); setApprovalModal(null); }}>Expire</button>
               <button className="secondary" onClick={() => { void explainDecision(approvalModal.actionRequestId); }}>Explain</button>
             </div>
           </div>

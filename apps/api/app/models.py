@@ -26,6 +26,8 @@ class ApprovalStatus(str, Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    expired = "expired"
+    cancelled = "cancelled"
 
 
 class User(SQLModel, table=True):
