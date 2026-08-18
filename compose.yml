@@ -22,6 +22,7 @@ services:
       API_CORS_ORIGINS: http://localhost:5173,http://localhost:3000
       ENVIRONMENT: development
       SEED_DEMO_DATA: "true"
+      PYTHONUNBUFFERED: "1"
     ports:
       - "8000:8000"
     volumes:
@@ -39,11 +40,16 @@ services:
     build: ./apps/web
     environment:
       VITE_API_BASE_URL: http://localhost:8000/api/v1
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      NODE_ENV: development
     ports:
       - "5173:5173"
     volumes:
       - ./apps/web:/app
       - web_node_modules:/app/node_modules
+    stdin_open: true
+    tty: true
     depends_on:
       api:
         condition: service_healthy

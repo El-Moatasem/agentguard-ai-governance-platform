@@ -66,14 +66,44 @@ th { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing:
 .auditList small, time { color: #64748b; font-size: 11px; }
 time { white-space: nowrap; }
 .panel { margin: 18px 0; }
+.mtTop { margin-top: 18px; }
+.workflowPanel { padding: 24px; }
+.workflowLayout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.6fr); gap: 18px; align-items: start; }
+.workflowMain { min-width: 0; }
+.workflowChecklist { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.workflowChecklist div { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px; }
+.workflowChecklist strong { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-weight: 800; }
+.workflowChecklist span { font-size: 13px; color: #475569; }
+.approvalRow.selected { background: #eff6ff; }
+.modalBackdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: grid; place-items: center; padding: 24px; z-index: 50; }
+.approvalModal { width: min(920px, 100%); background: white; border-radius: 22px; box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28); padding: 24px; border: 1px solid #e2e8f0; }
+.modalHeader { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 12px; }
+.modalHeader h3 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); }
+.modalStatusRow { margin-bottom: 16px; }
+.modalGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.modalGrid h4 { margin: 0 0 12px; font-size: 1rem; }
+.modalMeta { display: grid; gap: 10px; margin: 0; }
+.modalMeta div { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+.modalMeta dt { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.modalMeta dd { margin: 0; font-weight: 600; }
+.modalPolicySummary, .modalExplanation { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
+.modalPolicySummary p { margin: 0 0 10px; }
+.policyReason { color: #475569; }
+.modalExplanation p { margin: 0 0 10px; }
+.modalExplanation small { color: #64748b; }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.explainBox { margin: 12px 0 18px; padding: 14px 16px; border-radius: 12px; border: 1px solid #bfdbfe; background: #eff6ff; }
+.explainBox p { margin: 8px 0; }
+.explainBox small { color: #475569; }
 @media (max-width: 900px) {
   main { padding: 18px; }
   .hero { align-items: stretch; flex-direction: column; padding: 28px; }
-  .metrics, .twoColumns { grid-template-columns: 1fr 1fr; }
+  .metrics, .twoColumns, .workflowChecklist { grid-template-columns: 1fr 1fr; }
+  .workflowLayout { grid-template-columns: 1fr; }
   .decisionCard dl { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
-  .metrics, .twoColumns, .formGrid { grid-template-columns: 1fr; }
+  .metrics, .twoColumns, .formGrid, .workflowChecklist { grid-template-columns: 1fr; }
   .wide { grid-column: auto; }
   .auditList > div, .listCard { flex-direction: column; }
 }

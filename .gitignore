@@ -6,6 +6,7 @@ __pycache__/
 .coverage
 htmlcov/
 *.db
+dumi.md
 
 # Node
 node_modules/

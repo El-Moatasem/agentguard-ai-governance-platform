@@ -24,6 +24,12 @@ type Policy = {
   conditions: Record<string, unknown>;
 };
 type Approval = { id: number; action_request_id: number; status: string; reviewer_email?: string | null };
+type Tool = { id: number; agent_id: number; name: string; endpoint: string; allowed_actions: string[] };
+type Explanation = {
+  summary: string;
+  reason: string;
+  safety_note: string;
+};
 type AuditEvent = {
   id: number;
   correlation_id?: string | null;
@@ -43,6 +49,19 @@ type Decision = {
   action_request_id?: number;
   approval_id?: number;
 };
+type ApprovalDetail = {
+  approvalId: number;
+  actionRequestId: number;
+  agentName: string;
+  action: string;
+  resourceName: string;
+  environment: string;
+  userEmail: string;
+  policySummary: string;
+  decisionReason: string;
+  explanation?: Explanation;
+  status: string;
+};
 
 const roleByToken = Object.entries(demoTokens).find(([, token]) => token === getToken())?.[0] as DemoRole | undefined;
 
@@ -51,9 +70,13 @@ function App() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [audits, setAudits] = useState<AuditEvent[]>([]);
   const [decision, setDecision] = useState<Decision | null>(null);
+  const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null);
+  const [approvalModal, setApprovalModal] = useState<ApprovalDetail | null>(null);
+  const [explanations, setExplanations] = useState<Record<number, Explanation>>({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,6 +90,14 @@ function App() {
     resource_name: "customer_profile",
     environment: "sandbox",
     context: '{"customer_id":"C-10045","country":"Kenya"}',
+  });
+
+  const [toolRequest, setToolRequest] = useState({
+    agent_name: "customer-support-agent",
+    action: "read",
+    resource_name: "customer_transactions",
+    environment: "sandbox",
+    context: '{"customer_id":"C-10045","country":"Kenya","amount":2500}',
   });
 
   const [policyDraft, setPolicyDraft] = useState({
@@ -93,16 +124,23 @@ function App() {
     setLoading(true);
     setError("");
     try {
-      const requests: Promise<unknown>[] = [apiGet("/dashboard/metrics"), apiGet("/agents"), apiGet("/policies")];
+      const requests: Promise<unknown>[] = [apiGet("/dashboard/metrics"), apiGet("/agents"), apiGet("/policies"), apiGet("/tools")];
       if (canSeeApprovals) requests.push(apiGet("/approvals"));
       if (canSeeAudit) requests.push(apiGet(`/audit-events${auditQuery}`));
       const values = await Promise.all(requests);
       setMetrics(values[0] as Metrics);
       setAgents(values[1] as Agent[]);
       setPolicies(values[2] as Policy[]);
-      let index = 3;
-      if (canSeeApprovals) setApprovals(values[index++] as Approval[]);
-      else setApprovals([]);
+      setTools(values[3] as Tool[]);
+      let index = 4;
+      if (canSeeApprovals) {
+        const nextApprovals = values[index++] as Approval[];
+        setApprovals(nextApprovals);
+        setSelectedApproval((current) => current && nextApprovals.some((item) => item.id === current.id) ? current : nextApprovals.find((item) => item.status === "pending") || nextApprovals[0] || null);
+      } else {
+        setApprovals([]);
+        setSelectedApproval(null);
+      }
       if (canSeeAudit) setAudits(values[index] as AuditEvent[]);
       else setAudits([]);
     } catch (caught) {
@@ -123,6 +161,40 @@ function App() {
     setNotice(`Switched to the ${nextRole} demonstration role.`);
   }
 
+  async function explainDecision(actionRequestId: number | undefined | null) {
+    if (!actionRequestId) return null;
+    try {
+      const explanation = (await apiPost("/assistant/explain-decision", { action_request_id: actionRequestId })) as Explanation;
+      setExplanations((current) => ({ ...current, [actionRequestId]: explanation }));
+      if (approvalModal && approvalModal.actionRequestId === actionRequestId) {
+        setApprovalModal({ ...approvalModal, explanation });
+      }
+      return explanation;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Decision explanation failed");
+      return null;
+    }
+  }
+
+  function openApprovalModal(approval: Approval) {
+    const fallbackPolicy = policies.find((policy) => policy.effect === "requires_approval")?.name || "Sensitive action policy";
+    const detail: ApprovalDetail = {
+      approvalId: approval.id,
+      actionRequestId: approval.action_request_id,
+      agentName: decision?.matched_policy_name ? toolRequest.agent_name : simulation.agent_name,
+      action: decision?.action_request_id === approval.action_request_id ? simulation.action : toolRequest.action,
+      resourceName: decision?.action_request_id === approval.action_request_id ? simulation.resource_name : toolRequest.resource_name,
+      environment: decision?.action_request_id === approval.action_request_id ? simulation.environment : toolRequest.environment,
+      userEmail: decision?.action_request_id === approval.action_request_id ? simulation.user_email : "developer@demo.local",
+      policySummary: decision?.matched_policy_name ? `Matched policy: ${decision.matched_policy_name}` : `Policy summary: ${fallbackPolicy} requires human approval before sensitive access can continue.`,
+      decisionReason: decision?.reason || "Sensitive action has been flagged for approval because the policy gate requires human review before execution continues.",
+      status: approval.status,
+      explanation: explanations[approval.action_request_id],
+    };
+    setSelectedApproval(approval);
+    setApprovalModal(detail);
+  }
+
   async function submitSimulation(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -132,7 +204,27 @@ function App() {
         ...simulation,
         context: JSON.parse(simulation.context || "{}"),
       });
-      setDecision(result as Decision);
+      const decisionResult = result as Decision;
+      setDecision(decisionResult);
+      if (decisionResult.approval_id) {
+        const nextApproval = { id: decisionResult.approval_id, action_request_id: decisionResult.action_request_id ?? 0, status: "pending", reviewer_email: null };
+        setSelectedApproval(nextApproval);
+        setApprovalModal({
+          approvalId: nextApproval.id,
+          actionRequestId: nextApproval.action_request_id,
+          agentName: simulation.agent_name,
+          action: simulation.action,
+          resourceName: simulation.resource_name,
+          environment: simulation.environment,
+          userEmail: simulation.user_email,
+          policySummary: decisionResult.matched_policy_name ? `Matched policy: ${decisionResult.matched_policy_name}` : "Sensitive action policy requires human approval before execution continues.",
+          decisionReason: decisionResult.reason,
+          status: "pending",
+        });
+      }
+      if (decisionResult.action_request_id) {
+        await explainDecision(decisionResult.action_request_id);
+      }
       setNotice("The action was evaluated and an audit event was created.");
       await load();
     } catch (caught) {
@@ -186,10 +278,50 @@ function App() {
   async function reviewApproval(id: number, action: "approve" | "reject") {
     try {
       await apiPost(`/approvals/${id}/${action}`, { notes: `${action}d during the AgentGuard demonstration.` });
+      if (approvalModal && approvalModal.approvalId === id) {
+        setApprovalModal({ ...approvalModal, status: action === "approve" ? "approved" : "rejected" });
+      }
       setNotice(`Approval request ${id} was ${action}d.`);
       await load();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Approval review failed");
+    }
+  }
+
+  async function runGuardedToolRequest(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    try {
+      const result = await apiPost("/decisions/evaluate", {
+        ...toolRequest,
+        context: JSON.parse(toolRequest.context || "{}"),
+      });
+      const decisionResult = result as Decision;
+      setDecision(decisionResult);
+      if (decisionResult.approval_id) {
+        const nextApproval = { id: decisionResult.approval_id, action_request_id: decisionResult.action_request_id ?? 0, status: "pending", reviewer_email: null };
+        setSelectedApproval(nextApproval);
+        setApprovalModal({
+          approvalId: nextApproval.id,
+          actionRequestId: nextApproval.action_request_id,
+          agentName: toolRequest.agent_name,
+          action: toolRequest.action,
+          resourceName: toolRequest.resource_name,
+          environment: toolRequest.environment,
+          userEmail: simulation.user_email,
+          policySummary: decisionResult.matched_policy_name ? `Matched policy: ${decisionResult.matched_policy_name}` : "Sensitive action policy requires human approval before execution continues.",
+          decisionReason: decisionResult.reason,
+          status: "pending",
+        });
+      }
+      if (decisionResult.action_request_id) {
+        await explainDecision(decisionResult.action_request_id);
+      }
+      setNotice("Tool execution request routed through AgentGuard governance checks.");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Guarded tool request failed");
     }
   }
 
@@ -237,42 +369,73 @@ function App() {
         </section>
       )}
 
-      <section className="grid twoColumns">
-        <article className="panel">
-          <div className="sectionHeading">
-            <div><p className="kicker">Policy decision service</p><h2>Action simulator</h2></div>
-            <span className="versionTag">API v0.2.0</span>
-          </div>
-          {canSimulate ? (
-            <form onSubmit={submitSimulation} className="formGrid">
-              <label>Agent<select value={simulation.agent_name} onChange={(event) => setSimulation({ ...simulation, agent_name: event.target.value })}>{agents.map((agent) => <option key={agent.id}>{agent.name}</option>)}</select></label>
-              <label>Environment<select value={simulation.environment} onChange={(event) => setSimulation({ ...simulation, environment: event.target.value })}><option>sandbox</option><option>staging</option><option>production</option></select></label>
-              <label>Action<input value={simulation.action} onChange={(event) => setSimulation({ ...simulation, action: event.target.value })} /></label>
-              <label>Protected resource<input value={simulation.resource_name} onChange={(event) => setSimulation({ ...simulation, resource_name: event.target.value })} /></label>
-              <label className="wide">Context JSON<textarea rows={3} value={simulation.context} onChange={(event) => setSimulation({ ...simulation, context: event.target.value })} /></label>
-              <div className="wide buttonRow"><button type="submit">Evaluate and audit</button></div>
-            </form>
-          ) : <p>Your current role can review outcomes but cannot initiate action simulations.</p>}
-          <div className="scenarioButtons">
-            <button className="secondary" disabled={!canSimulate} onClick={() => void runScenario("customer_profile", "read")}>Allowed profile read</button>
-            <button className="secondary" disabled={!canSimulate} onClick={() => void runScenario("customer_transactions", "read")}>Sensitive transaction read</button>
-            <button className="secondary" disabled={!canSimulate} onClick={() => void runScenario("customer_profile", "read", "production")}>Denied production access</button>
-          </div>
-          {decision && <DecisionCard decision={decision} />}
-        </article>
+      <section className="panel workflowPanel">
+        <div className="sectionHeading">
+          <div><p className="kicker">Real agent / MCP workflow</p><h2>Protected tool execution</h2></div>
+          <span className="versionTag">Policy gate + approval</span>
+        </div>
 
-        <article className="panel">
-          <p className="kicker">Registered capabilities</p>
-          <h2>AI agents</h2>
-          <div className="cardsList">
-            {agents.map((agent) => (
-              <div className="listCard" key={agent.id}>
-                <div><strong>{agent.name}</strong><p>{agent.purpose}</p></div>
-                <span className={`risk ${agent.risk_level}`}>{agent.risk_level}</span>
-              </div>
-            ))}
+        <div className="workflowLayout">
+          <div className="workflowMain">
+            {canSimulate ? (
+              <form onSubmit={runGuardedToolRequest} className="formGrid">
+                <label>Agent<select value={toolRequest.agent_name} onChange={(event) => setToolRequest({ ...toolRequest, agent_name: event.target.value })}>{agents.map((agent) => <option key={agent.id}>{agent.name}</option>)}</select></label>
+                <label>Environment<select value={toolRequest.environment} onChange={(event) => setToolRequest({ ...toolRequest, environment: event.target.value })}><option>sandbox</option><option>staging</option><option>production</option></select></label>
+                <label>Tool action<input value={toolRequest.action} onChange={(event) => setToolRequest({ ...toolRequest, action: event.target.value })} /></label>
+                <label>Protected resource<input value={toolRequest.resource_name} onChange={(event) => setToolRequest({ ...toolRequest, resource_name: event.target.value })} /></label>
+                <label className="wide">Tool context JSON<textarea rows={3} value={toolRequest.context} onChange={(event) => setToolRequest({ ...toolRequest, context: event.target.value })} /></label>
+                <div className="wide buttonRow"><button type="submit">Send guarded MCP-style tool request</button></div>
+              </form>
+            ) : <p>Your current role can review outcomes but cannot initiate protected tool requests.</p>}
+
+            <div className="scenarioButtons">
+              <button className="secondary" disabled={!canSimulate} onClick={() => void runScenario("customer_profile", "read")}>Allowed profile read</button>
+              <button className="secondary" disabled={!canSimulate} onClick={() => void runScenario("customer_transactions", "read")}>Sensitive transaction read</button>
+              <button className="secondary" disabled={!canSimulate} onClick={() => void runScenario("customer_profile", "read", "production")}>Denied production access</button>
+            </div>
+
+            {decision && <DecisionCard decision={decision} explanation={decision.action_request_id ? explanations[decision.action_request_id] : undefined} />}
           </div>
-        </article>
+
+        </div>
+
+        <div className="workflowChecklist">
+          <div><strong>1</strong><span>Agent requests tool access</span></div>
+          <div><strong>2</strong><span>Policy engine evaluates risk and context</span></div>
+          <div><strong>3</strong><span>Approval gate triggers for sensitive actions</span></div>
+          <div><strong>4</strong><span>Audit log records the final decision</span></div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <p className="kicker">Registered capabilities</p>
+        <h2>AI agents</h2>
+        <div className="cardsList">
+          {agents.map((agent) => (
+            <div className="listCard" key={agent.id}>
+              <div><strong>{agent.name}</strong><p>{agent.purpose}</p></div>
+              <span className={`risk ${agent.risk_level}`}>{agent.risk_level}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="sectionHeading">
+          <div><p className="kicker">Tools in the registry</p><h2>Connected MCP capabilities</h2></div>
+          <span className="versionTag">{tools.length} tools</span>
+        </div>
+        <div className="cardsList mtTop">
+          {tools.map((tool) => (
+            <div className="listCard" key={tool.id}>
+              <div>
+                <div className="titleLine"><strong>{tool.name}</strong><span className="pill allow">{tool.allowed_actions.join(", ") || "read"}</span></div>
+                <p>{tool.endpoint}</p>
+              </div>
+              <small>Registered for agent #{tool.agent_id}</small>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="grid twoColumns">
@@ -311,7 +474,7 @@ function App() {
       {canSeeApprovals && (
         <section className="panel">
           <div className="sectionHeading"><div><p className="kicker">Human-in-the-loop preview</p><h2>Approval queue</h2></div><span>{approvals.filter((item) => item.status === "pending").length} pending</span></div>
-          <div className="tableWrap"><table><thead><tr><th>ID</th><th>Action request</th><th>Status</th><th>Reviewer</th><th>Actions</th></tr></thead><tbody>{approvals.map((approval) => <tr key={approval.id}><td>#{approval.id}</td><td>#{approval.action_request_id}</td><td><span className={`pill ${approval.status === "pending" ? "approval" : approval.status === "approved" ? "allow" : "deny"}`}>{approval.status}</span></td><td>{approval.reviewer_email || "—"}</td><td>{approval.status === "pending" && (role === "admin" || role === "approver") ? <div className="buttonRow"><button onClick={() => void reviewApproval(approval.id, "approve")}>Approve</button><button className="dangerButton" onClick={() => void reviewApproval(approval.id, "reject")}>Reject</button></div> : "—"}</td></tr>)}</tbody></table></div>
+          <div className="tableWrap"><table><thead><tr><th>ID</th><th>Action request</th><th>Status</th><th>Reviewer</th><th>Actions</th></tr></thead><tbody>{approvals.map((approval) => <tr key={approval.id} className={selectedApproval?.id === approval.id ? "approvalRow selected" : "approvalRow"} onClick={() => openApprovalModal(approval)}><td>#{approval.id}</td><td>#{approval.action_request_id}</td><td><span className={`pill ${approval.status === "pending" ? "approval" : approval.status === "approved" ? "allow" : "deny"}`}>{approval.status}</span></td><td>{approval.reviewer_email || "—"}</td><td>{approval.status === "pending" && (role === "admin" || role === "approver") ? <div className="buttonRow"><button onClick={(event) => { event.stopPropagation(); void reviewApproval(approval.id, "approve"); }}>Approve</button><button className="dangerButton" onClick={(event) => { event.stopPropagation(); void reviewApproval(approval.id, "reject"); }}>Reject</button></div> : <button className="secondary" onClick={(event) => { event.stopPropagation(); void explainDecision(approval.action_request_id); }}>Explain</button>}</td></tr>)}</tbody></table></div>
         </section>
       )}
 
@@ -322,6 +485,66 @@ function App() {
           <div className="auditList">{audits.map((audit) => <div key={audit.id}><div><div className="titleLine"><span className={`pill ${audit.result === "requires_approval" ? "approval" : audit.result === "allow" || audit.result === "success" || audit.result === "approved" ? "allow" : "deny"}`}>{audit.result}</span><strong>{audit.event_type}</strong></div><p>{audit.message}</p><small>{audit.actor_email} · {audit.correlation_id || "no correlation ID"}</small></div><time>{new Date(audit.created_at).toLocaleString()}</time></div>)}</div>
         </section>
       )}
+
+      {approvalModal && (
+        <div className="modalBackdrop" onClick={() => setApprovalModal(null)}>
+          <div className="approvalModal" onClick={(event) => event.stopPropagation()}>
+            <div className="modalHeader">
+              <div>
+                <p className="kicker">Approval review</p>
+                <h3>Action requires human approval</h3>
+              </div>
+              <button className="secondary" onClick={() => setApprovalModal(null)}>Close</button>
+            </div>
+
+            <div className="modalStatusRow">
+              <span className={`pill ${approvalModal.status === "pending" ? "approval" : approvalModal.status === "approved" ? "allow" : "deny"}`}>{approvalModal.status}</span>
+            </div>
+
+            <div className="modalGrid">
+              <div>
+                <h4>Request metadata</h4>
+                <dl className="modalMeta">
+                  <div><dt>Approval ID</dt><dd>#{approvalModal.approvalId}</dd></div>
+                  <div><dt>Action request</dt><dd>#{approvalModal.actionRequestId}</dd></div>
+                  <div><dt>Agent</dt><dd>{approvalModal.agentName}</dd></div>
+                  <div><dt>Requested action</dt><dd>{approvalModal.action}</dd></div>
+                  <div><dt>Resource</dt><dd>{approvalModal.resourceName}</dd></div>
+                  <div><dt>Environment</dt><dd>{approvalModal.environment}</dd></div>
+                  <div><dt>User</dt><dd>{approvalModal.userEmail}</dd></div>
+                </dl>
+              </div>
+
+              <div>
+                <h4>Policy summary</h4>
+                <div className="modalPolicySummary">
+                  <p>{approvalModal.policySummary}</p>
+                  <p className="policyReason">{approvalModal.decisionReason}</p>
+                </div>
+
+                <h4>Decision explanation</h4>
+                <div className="modalExplanation">
+                  {approvalModal.explanation ? (
+                    <>
+                      <p><strong>{approvalModal.explanation.summary}</strong></p>
+                      <p>{approvalModal.explanation.reason}</p>
+                      <small>{approvalModal.explanation.safety_note}</small>
+                    </>
+                  ) : (
+                    <p>Explanation will appear after the assistant explains this decision.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="modalActions">
+              <button onClick={() => { void reviewApproval(approvalModal.approvalId, "approve"); setApprovalModal(null); }}>Approve</button>
+              <button className="dangerButton" onClick={() => { void reviewApproval(approvalModal.approvalId, "reject"); setApprovalModal(null); }}>Reject</button>
+              <button className="secondary" onClick={() => { void explainDecision(approvalModal.actionRequestId); }}>Explain</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -330,9 +553,9 @@ function Metric({ label, value }: { label: string; value: number }) {
   return <article><strong>{value}</strong><span>{label}</span></article>;
 }
 
-function DecisionCard({ decision }: { decision: Decision }) {
+function DecisionCard({ decision, explanation }: { decision: Decision; explanation?: Explanation }) {
   const className = decision.decision === "requires_approval" ? "approval" : decision.decision;
-  return <div className="decisionCard"><div className="titleLine"><span className={`pill ${className}`}>{decision.decision}</span><strong>{decision.matched_policy_name || "Default-deny rule"}</strong></div><p>{decision.reason}</p><dl><div><dt>Correlation ID</dt><dd>{decision.correlation_id}</dd></div><div><dt>Policies evaluated</dt><dd>{decision.evaluated_policy_count}</dd></div><div><dt>Request ID</dt><dd>{decision.action_request_id || "Dry run"}</dd></div></dl></div>;
+  return <div className="decisionCard"><div className="titleLine"><span className={`pill ${className}`}>{decision.decision}</span><strong>{decision.matched_policy_name || "Default-deny rule"}</strong></div><p>{decision.reason}</p>{explanation && <div className="explainBox"><strong>AI explanation</strong><p>{explanation.summary}</p><p>{explanation.reason}</p><small>{explanation.safety_note}</small></div>}<dl><div><dt>Correlation ID</dt><dd>{decision.correlation_id}</dd></div><div><dt>Policies evaluated</dt><dd>{decision.evaluated_policy_count}</dd></div><div><dt>Request ID</dt><dd>{decision.action_request_id || "Dry run"}</dd></div></dl></div>;
 }
 
 createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);
