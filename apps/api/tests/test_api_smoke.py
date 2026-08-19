@@ -8,7 +8,7 @@ AUDITOR = {"Authorization": "Bearer auditor-token"}
 
 def test_root_and_health():
     with TestClient(app) as client:
-        assert client.get("/").json()["version"] == "0.2.0"
+        assert client.get("/").json()["version"] == "0.3.0"
         assert client.get("/health").json()["status"] == "ok"
 
 

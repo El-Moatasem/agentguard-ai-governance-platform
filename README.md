@@ -1,58 +1,70 @@
 # AgentGuard: AI Agent Governance, Access Control, and Audit Platform
 
-AgentGuard is a Quantic MSSE Capstone project that demonstrates a governance layer for AI agents. It registers agent identities and protected capabilities, evaluates requested actions through deterministic policies, routes sensitive actions toward human review, and records traceable audit evidence.
+AgentGuard is a Quantic MSSE Capstone project that places a deterministic governance gateway between AI agents and external tools. It registers agents and tools, evaluates every requested action against versioned policies, pauses sensitive actions for independent human approval, executes only authorized tools, and records correlated audit evidence.
 
-> **Current release:** Sprint 2 release candidate, version `0.2.0`. This is not yet the final Capstone submission.
+> **Current release:** Sprint 3, version `0.3.0`. Sprint 4 will focus on production hardening, deployment, final testing, and submission evidence.
 
-## Sprint 2 Capabilities
+## Sprint 3 Capabilities
 
+- PostgreSQL 16 primary database with Alembic schema migrations.
 - Demonstration authentication and role-based access for administrator, developer, approver, and auditor roles.
-- AI-agent, tool, and protected-resource registries.
-- Versioned policy lifecycle: create, update, activate, deactivate, inspect history, and dry-run tests.
-- Deterministic `allow`, `deny`, and `requires_approval` outcomes.
-- Explicit policy conflict resolution and default deny.
-- Nested contextual conditions such as `context.amount` and `context.country`.
-- Stored action requests with unique correlation IDs and matched-policy details.
-- Searchable audit events with CSV and JSON exports.
-- Governance metrics for active policies and decision outcomes.
-- PostgreSQL 16 through Docker Compose.
-- Alembic database migrations.
-- React/TypeScript Sprint 2 dashboard.
-- GitHub Actions workflows for PostgreSQL-backed backend tests and Yarn frontend builds.
-- Jira-ready Sprint 1 and Sprint 2 stories/tasks.
+- Agent, tool, and protected-resource registries.
+- Versioned deterministic policies with priority/conflict handling, context conditions, dry-run evaluation, and default deny.
+- `allow`, `deny`, and `requires_approval` outcomes with unique correlation IDs.
+- Complete approval lifecycle: pending, approved, rejected, cancelled, and expired.
+- Independent-review rule that prevents requesters from approving or rejecting their own governed action.
+- Tool execution gateway with idempotency, attempt counts, success/failure states, safe retry rules, and audit evidence.
+- `mock://` deterministic tool adapter and `mcp://` MCP adapter.
+- Configurable streamable-HTTP MCP integration with local/CI mock mode.
+- Agent runtime with a mock planner and configurable OpenAI-compatible planning provider.
+- Grounded AI decision explanations that cannot modify authorization.
+- Prompt-injection checks, unsafe-argument validation, payload limits, and secret redaction.
+- React/TypeScript Sprint 3 governance UI for agent runs, approvals, executions, explanations, policies, and audit evidence.
+- GitHub Actions for PostgreSQL-backed backend tests and Yarn frontend builds.
+- Jira-ready Sprint 1-3 stories/tasks and Sprint 3 demo/release material.
 
-## Deferred to Later Sprints
+## Sprint 3 Architecture
 
-- Completed human-approval execution/resume workflow.
-- Real OpenAI agent and MCP/Zapier integration.
-- OIDC/SSO authentication.
-- Real LLM-based policy explanations and evaluation.
-- Production deployment and monitoring.
-- Security hardening, performance testing, and final presentation evidence.
+```text
+AI Agent / Human Request
+          |
+          v
+   Security Guardrails
+          |
+          v
+ Deterministic Policy Engine
+    /       |        \
+ allow     deny    requires_approval
+   |         |           |
+   |      blocked    Human Review
+   |                     |
+   +----------+----------+
+              v
+      Tool Execution Gateway
+        /             \
+   mock:// adapter    mcp:// adapter
+              |
+              v
+     Correlated Audit Trail
+```
 
-## Repository Links to Add Before Submission
-
-- Deployed application: `TODO: add production URL`
-- Official agile board: `TODO: add Jira or GitHub Project URL`
-- Final demo video: `TODO: add Google Drive MP4 URL`
+AI planning and explanation are deliberately separated from authorization. A model may propose a registered tool or explain an already-final result, but only the deterministic policy engine can authorize execution.
 
 ## Technology Stack
 
 | Layer | Technology |
 |---|---|
 | Frontend | React, TypeScript, Vite, Yarn |
-| Backend | Python, FastAPI, SQLModel |
+| Backend | Python, FastAPI, SQLModel/SQLAlchemy |
 | Primary database | PostgreSQL 16 |
-| Local fallback | SQLite through `DATABASE_URL` |
 | Migrations | Alembic |
-| Policy engine | Custom deterministic policy adapter |
-| Authentication | Demonstration bearer tokens |
+| Policy engine | Custom deterministic policy engine |
+| Agent/AI adapter | Mock + OpenAI-compatible chat-completions adapter |
+| Tool integrations | Mock adapter + MCP streamable-HTTP adapter |
 | Testing | Pytest, FastAPI TestClient, TypeScript strict checking |
 | DevOps | Docker Compose and GitHub Actions |
 
-## Recommended Quick Start: Docker Compose
-
-Docker is not a mandatory Capstone technology, but it is the recommended AgentGuard setup because it reproduces the PostgreSQL-backed environment.
+## Quick Start with Docker Compose
 
 ```bash
 cp .env.example .env
@@ -61,24 +73,21 @@ docker compose up --build
 
 Open:
 
-- Web application: `http://localhost:5173`
-- API root: `http://localhost:8000`
-- Swagger API documentation: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
+```text
+Web:     http://localhost:5173
+API:     http://localhost:8000
+Swagger: http://localhost:8000/docs
+Health:  http://localhost:8000/health
+```
 
-Stop the application:
+Stop/reset:
 
 ```bash
 docker compose down
-```
-
-Reset all local PostgreSQL data:
-
-```bash
 docker compose down -v
 ```
 
-## Manual Development with Yarn
+## Manual Local Development
 
 ### Backend
 
@@ -88,12 +97,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-export DATABASE_URL=sqlite:///./agentguard.db
+
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard"
 alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-
-Use a PostgreSQL `DATABASE_URL` instead of SQLite when testing production-oriented behavior.
 
 ### Frontend
 
@@ -102,6 +110,8 @@ cd apps/web
 corepack enable
 corepack prepare yarn@1.22.22 --activate
 yarn install --frozen-lockfile
+yarn typecheck
+yarn build
 yarn dev
 ```
 
@@ -114,27 +124,58 @@ approver-token
 auditor-token
 ```
 
-The UI includes a demonstration-role switcher. In Swagger, use **Authorize** and provide a token.
+The role switcher is intentionally a Capstone demonstration mechanism. Sprint 4 replaces it with production-oriented authentication.
+
+## MCP Integration
+
+The default mode is safe and deterministic:
+
+```bash
+export MCP_MOCK_MODE=true
+```
+
+To connect an actual streamable-HTTP MCP endpoint:
+
+```bash
+export MCP_MOCK_MODE=false
+export MCP_SERVER_URL="https://your-mcp-server.example/mcp"
+export MCP_AUTH_TOKEN="your-secret-token"
+```
+
+Registered `mcp://tool_name` entries are still governed by AgentGuard before `tools/call` is invoked.
+
+## AI Provider Integration
+
+Local development and CI use the mock/deterministic provider:
+
+```bash
+export AI_PROVIDER=mock
+```
+
+A compatible model provider can be configured without changing the governance path:
+
+```bash
+export AI_PROVIDER=openai_compatible
+export AI_BASE_URL="https://api.openai.com/v1"
+export AI_API_KEY="your-secret-key"
+export AI_MODEL="gpt-5-mini"
+```
+
+Never commit API or MCP credentials.
 
 ## Database Migrations
-
-Apply all migrations:
 
 ```bash
 cd apps/api
 alembic upgrade head
-```
-
-Create a future migration after changing models:
-
-```bash
-alembic revision --autogenerate -m "describe the schema change"
-```
-
-Inspect the current revision:
-
-```bash
 alembic current
+alembic history
+```
+
+Sprint 3 head:
+
+```text
+20260808_0002
 ```
 
 ## Testing
@@ -146,34 +187,36 @@ cd apps/api
 pytest -q
 ```
 
-Sprint 2 generated-release verification: **19 passed**.
+Generated Sprint 3 verification: **37 backend tests passed** after applying migrations to a fresh database.
 
 Frontend:
 
 ```bash
 cd apps/web
 yarn install --frozen-lockfile
+yarn typecheck
 yarn build
 ```
 
-## Sprint and Jira Material
+## Sprint Material
 
-- [Sprint 1 stories and tasks](sprints/sprint_1/Sprint_1_User_Stories_and_Tasks.md)
-- [Sprint 1 Jira import](sprints/sprint_1/jira_import_sprint_1.csv)
-- [Sprint 2 stories and tasks](sprints/sprint_2/Sprint_2_User_Stories_and_Tasks.md)
-- [Sprint 2 release notes](sprints/sprint_2/AgentGuard_Sprint2_Release_Notes.md)
-- [Sprint 2 Jira import](sprints/sprint_2/jira_import_sprint_2.csv)
-- [Jira setup guide](docs/Jira_Setup_and_Import_Guide.md)
-- [What changed in Sprint 2](docs/What_Changed_in_Sprint_2.md)
+- `sprints/sprint_1/` - Sprint 1 foundation evidence.
+- `sprints/sprint_2/` - Sprint 2 PostgreSQL/policy evidence.
+- `sprints/sprint_3/Sprint_3_User_Stories_and_Tasks.md` - Sprint 3 Jira story/task detail.
+- `sprints/sprint_3/jira_import_sprint_3.csv` - Jira import file.
+- `sprints/sprint_3/AgentGuard_Sprint3_Release_Notes.md` - release evidence.
+- `sprints/sprint_3/Sprint_3_Demo_Script.md` - sprint review/demo sequence.
+- `docs/architecture-sprint3.md` - Sprint 3 execution and trust-boundary architecture.
+- `docs/sprint3-security-and-ai-evaluation.md` - guardrails and AI evaluation contract.
 
-## Architecture and Design
+## Repository Links to Add Before Final Submission
 
-- [Architecture](docs/architecture.md)
-- [Design and testing](docs/design-and-testing.md)
-- [Threat model](docs/threat-model.md)
-- [AI evaluation plan](docs/ai-evaluation.md)
-- [Sprint plan](docs/sprint-plan.md)
+```text
+Production deployment: TODO Sprint 4
+Official Jira board:    TODO add accessible board URL
+Final demo video:       TODO Sprint 4 Google Drive link
+```
 
 ## Academic Integrity
 
-Review, understand, run, test, and modify the generated source before presenting it as your work. Keep an accurate task board, commit history, architectural decisions, test evidence, and sprint demonstrations. Attribute external templates, libraries, and borrowed code where applicable.
+AI-assisted tools may support planning, scaffolding, code review, testing, and documentation, but all submitted code should be reviewed, understood, tested, adapted, and explained by the project author. Maintain accurate Jira status, commit/PR history, test evidence, architectural decisions, sprint demos, and third-party attribution.

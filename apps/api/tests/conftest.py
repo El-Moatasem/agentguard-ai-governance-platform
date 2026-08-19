@@ -11,6 +11,7 @@ from app.models import (
     PolicyVersion,
     ProtectedResource,
     Tool,
+    ToolExecution,
     User,
 )
 from app.seed import seed_demo_data
@@ -18,15 +19,14 @@ from app.seed import seed_demo_data
 
 @pytest.fixture(autouse=True)
 def reset_test_database():
-    """
-    Reset application data before every test.
+    """Reset mutable application data before every test.
 
-    This prevents tests that create or modify policies from affecting
-    subsequent tests when using the persistent PostgreSQL test database.
+    CI applies Alembic migrations before pytest. This fixture then restores a
+    deterministic seed for every test so policy or approval state cannot leak
+    between cases.
     """
-
     with Session(engine) as session:
-        # Delete child/dependent records first because of foreign keys.
+        session.exec(delete(ToolExecution))
         session.exec(delete(Approval))
         session.exec(delete(AuditEvent))
         session.exec(delete(ActionRequest))
@@ -36,10 +36,6 @@ def reset_test_database():
         session.exec(delete(ProtectedResource))
         session.exec(delete(Agent))
         session.exec(delete(User))
-
         session.commit()
-
-        # Restore deterministic baseline data.
         seed_demo_data(session)
-
     yield
