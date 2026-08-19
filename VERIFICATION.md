@@ -1,30 +1,36 @@
-# Sprint 2 Generated-Release Verification
+# Sprint 3 Generated-Release Verification
 
-The source package was checked during generation using a clean validation database and the uploaded project's dependency metadata.
+## Backend verification
 
-## Passed
+A fresh SQLite validation database was used as a portable migration/test harness in the generation environment:
 
-- Python source compilation.
-- Alembic baseline migration against a clean SQLite validation database.
-- FastAPI startup and health/registry smoke requests.
-- Backend automated test suite: **19 passed**.
-- TypeScript strict type check: **passed**.
-- Repository hygiene: no `.git`, virtual environment, `node_modules`, database file, `__pycache__`, or macOS metadata included in the release ZIP.
+```bash
+DATABASE_URL=sqlite:////tmp/agentguard_sprint3_test.db alembic upgrade head
+DATABASE_URL=sqlite:////tmp/agentguard_sprint3_test.db pytest -q
+```
 
-## To Run on Your Local Machine or GitHub Actions
+Result:
+
+```text
+20260808_0002 (head)
+37 passed
+```
+
+The repository CI remains PostgreSQL-backed and should be treated as the authoritative integration check after pushing the Sprint 3 branches.
+
+## Frontend verification
+
+The Sprint 3 TypeScript source passed strict `tsc --noEmit` checking in the generation environment using the uploaded project's React type packages.
+
+Run the full Yarn production build locally/CI:
 
 ```bash
 cd apps/web
 yarn install --frozen-lockfile
+yarn typecheck
 yarn build
 ```
 
-A full Vite bundle was not produced in the generation container because the uploaded dependency folder contained a macOS-specific native Rolldown binding, while the generation environment was Linux and had no dependency-network access. The committed GitHub Actions workflow installs the correct platform dependencies before building.
+## Required user verification
 
-## Before Moving Jira Stories to Done
-
-- Run Docker Compose with PostgreSQL.
-- Run `alembic current` and `pytest -q`.
-- Run `yarn build`.
-- Review and understand the code.
-- Attach your own commits, screenshots, test output, and sprint-demo recording.
+Before merging Sprint 3 into `develop`, verify PostgreSQL migrations, all GitHub Actions checks, the approval-to-execution workflow, MCP mock/remote mode as applicable, agent guardrails, audit correlation, and the Sprint 3 demo scenarios.

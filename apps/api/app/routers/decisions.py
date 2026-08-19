@@ -1,15 +1,13 @@
-from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
+
 from ..database import get_session
-from ..models import ActionRequest, Agent, Approval, ApprovalStatus, Policy, ProtectedResource, Role, User
+from ..models import ActionRequest, Role, User
 from ..schemas import ActionRequestOut, DecisionRequest, DecisionResponse
 from ..security import require_roles
-from ..services.audit import write_audit_event
-from ..services.policy_engine import PolicyEngine
+from ..services.governance import evaluate_and_record
 
 router = APIRouter(prefix="/decisions", tags=["decisions"])
-engine = PolicyEngine()
 
 
 @router.get("/requests", response_model=list[ActionRequestOut])
@@ -50,81 +48,15 @@ def evaluate_action(
     user: User = Depends(require_roles(Role.admin, Role.developer)),
     session: Session = Depends(get_session),
 ):
-    agent = session.exec(
-        select(Agent).where(
-            Agent.organization_id == user.organization_id,
-            Agent.name == payload.agent_name,
-            Agent.status == "active",
-        )
-    ).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Active agent not found")
-
-    resource = session.exec(
-        select(ProtectedResource).where(
-            ProtectedResource.organization_id == user.organization_id,
-            ProtectedResource.name == payload.resource_name,
-        )
-    ).first()
-    if not resource:
-        raise HTTPException(status_code=404, detail="Protected resource not found")
-
-    policies = session.exec(select(Policy).where(Policy.organization_id == user.organization_id)).all()
-    request = payload.model_dump()
-    decision = engine.evaluate(policies=policies, request=request)
-    correlation_id = uuid4().hex
-
-    action_request = ActionRequest(
-        organization_id=user.organization_id,
-        correlation_id=correlation_id,
-        **request,
-        decision=decision.decision,
-        reason=decision.reason,
-        matched_policy_id=decision.matched_policy_id,
-        evaluated_policy_count=decision.evaluated_policy_count,
-    )
-    session.add(action_request)
-    session.commit()
-    session.refresh(action_request)
-
-    approval_id = None
-    if decision.decision == "requires_approval":
-        approval = Approval(
-            organization_id=user.organization_id,
-            action_request_id=action_request.id,
-            status=ApprovalStatus.pending,
-        )
-        session.add(approval)
-        session.commit()
-        session.refresh(approval)
-        approval_id = approval.id
-
-    write_audit_event(
-        session,
-        user=user,
-        event_type="policy_decision",
-        result=decision.decision,
-        message=decision.reason,
-        correlation_id=correlation_id,
-        metadata={
-            "action_request_id": action_request.id,
-            "approval_id": approval_id,
-            "agent_name": payload.agent_name,
-            "action": payload.action,
-            "resource_name": payload.resource_name,
-            "environment": payload.environment,
-            "matched_policy_id": decision.matched_policy_id,
-            "evaluated_policy_count": decision.evaluated_policy_count,
-        },
-    )
-
+    result = evaluate_and_record(payload, user, session)
+    request = result.action_request
     return DecisionResponse(
-        correlation_id=correlation_id,
-        decision=decision.decision,
-        reason=decision.reason,
-        matched_policy_id=decision.matched_policy_id,
-        matched_policy_name=decision.matched_policy_name,
-        evaluated_policy_count=decision.evaluated_policy_count,
-        action_request_id=action_request.id,
-        approval_id=approval_id,
+        correlation_id=request.correlation_id,
+        decision=request.decision,
+        reason=request.reason,
+        matched_policy_id=request.matched_policy_id,
+        matched_policy_name=result.matched_policy_name,
+        evaluated_policy_count=request.evaluated_policy_count,
+        action_request_id=request.id,
+        approval_id=result.approval.id if result.approval else None,
     )
