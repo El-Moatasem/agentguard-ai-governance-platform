@@ -1,0 +1,1020 @@
+AGENTGUARD SPRINT 3 - GIT FLOW AND PULL REQUEST GUIDE
+Version target: v0.3.0
+
+PURPOSE
+=======
+This guide maps the Sprint 3 Jira epic/stories/tasks to a practical Git and pull-request workflow. The recommended approach uses five feature PRs into Sprint-3, followed by Sprint-3 -> develop and develop -> main release PRs.
+
+Sprint 3 Jira epic:
+300 - AG Sprint 3 - Human Approval, Real Agent/MCP, and AI Explanations
+
+Recommended feature PR grouping:
+
+PR 1 - Stories 310 + 320
+  310 Complete the human approval lifecycle
+    311 Implement approval queue and detail APIs
+    312 Implement approve, reject, expire, and cancel transitions
+    313 Prevent self-approval and duplicate processing
+  320 Execute governed tools safely
+    321 Create provider-neutral tool adapter interface
+    322 Add idempotent execution records
+    323 Handle tool timeout, failure, and retry safely
+
+PR 2 - Stories 330 + 340
+  330 Integrate a real AI agent
+    331 Implement agent adapter and structured request schema
+    332 Register agent identity and permitted capabilities
+    333 Add mock mode for deterministic local and CI testing
+  340 Integrate one MCP tool provider
+    341 Configure MCP client and secret handling
+    342 Allowlist safe MCP tools and argument schemas
+    343 Implement MCP mock server or stub
+
+PR 3 - Stories 350 + 360
+  350 Explain policy decisions with AI without changing them
+    351 Create model-provider abstraction and mock provider
+    352 Build grounded explanation prompt and output schema
+    353 Handle AI provider failure safely
+  360 Add agent and MCP security guardrails
+    361 Validate and sanitize tool arguments
+    362 Add prompt-injection and bypass test cases
+    363 Redact secrets and sensitive fields from logs and prompts
+
+PR 4 - Story 370
+  370 Provide an end-to-end governance interface
+    371 Build approval queue and review screens
+    372 Display execution timeline and correlation data
+    373 Display grounded AI explanations and failure states
+
+PR 5 - Story 380
+  380 Test, document, and demonstrate Sprint 3
+    381 Add approval, agent, MCP, and end-to-end tests
+    382 Update architecture, threat model, and AI evaluation docs
+    383 Create Sprint 3 release notes and demo evidence
+
+IMPORTANT WORKFLOW RULES
+========================
+1. Create Sprint-3 from the latest develop branch after v0.2.0 is released.
+2. Every feature branch starts from the latest Sprint-3 after the previous feature PR has been merged.
+3. Every feature PR targets Sprint-3, not develop or main.
+4. Only mark the related Jira stories/tasks Done after the PR is merged and verified.
+5. Preserve your existing .git directory. Never copy another .git directory into the repository.
+6. Do not commit .env, .venv, node_modules, local databases, __pycache__, .DS_Store, API keys, or MCP credentials.
+7. The Sprint 3 ZIP is cumulative/reference source. Review and integrate the relevant changes for each PR rather than claiming unrelated changes under the wrong story.
+8. Shared files such as models.py, schemas.py, main.py, config.py, seed.py, and frontend main.tsx may contain changes for more than one story. Use `git add -p` when necessary so each PR contains only the intended hunks.
+
+STEP 1 - CREATE THE SPRINT-3 INTEGRATION BRANCH
+===============================================
+Start from the released and synchronized develop branch.
+
+Commands:
+
+```bash
+git switch develop
+git pull origin develop
+
+git switch -c Sprint-3
+git push -u origin Sprint-3
+```
+
+Verify:
+
+```bash
+git branch --show-current
+git status
+git log --oneline --decorate -10
+```
+
+Expected current branch:
+
+```text
+Sprint-3
+```
+
+Jira action:
+- Start Sprint 3.
+- Move Epic 300 and the first active stories to In Progress.
+
+OPTIONAL - PRESERVE THE CUMULATIVE SPRINT 3 ZIP AS A LOCAL SNAPSHOT
+==================================================================
+If you already copied the entire v0.3.0 source into your repository, preserve it before splitting work.
+
+```bash
+git switch -c sprint3-full-snapshot
+git add -A
+git commit -m "WIP: preserve complete Sprint 3 implementation"
+```
+
+Do NOT merge this branch and do NOT use it as Capstone evidence. It is only a local safety/reference branch.
+
+Return to the clean Sprint-3 branch:
+
+```bash
+git switch Sprint-3
+git status
+```
+
+If you need to compare a shared file with the cumulative source:
+
+```bash
+git diff Sprint-3..sprint3-full-snapshot -- apps/api/app/models.py
+git diff Sprint-3..sprint3-full-snapshot -- apps/api/app/schemas.py
+```
+
+For shared files, stage only the hunks that belong to the current PR:
+
+```bash
+git add -p apps/api/app/models.py
+git add -p apps/api/app/schemas.py
+git add -p apps/api/app/main.py
+```
+
+PR 1 - APPROVAL LIFECYCLE + GOVERNED EXECUTION
+==============================================
+Jira coverage:
+- Story 310 / Tasks 311, 312, 313
+- Story 320 / Tasks 321, 322, 323
+
+Branch:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+git switch -c sprint3/approval-execution-foundation
+```
+
+Primary implementation areas:
+
+```text
+apps/api/app/models.py
+apps/api/app/schemas.py
+apps/api/app/config.py
+apps/api/app/database.py
+apps/api/app/services/governance.py
+apps/api/app/services/tool_execution.py
+apps/api/app/routers/decisions.py
+apps/api/app/routers/approvals.py
+apps/api/app/routers/executions.py
+apps/api/alembic/versions/20260808_0002_sprint3_execution_and_approval.py
+```
+
+Also update router registration in main.py / routers/__init__.py only for the functionality introduced by this PR.
+
+Suggested logical commits:
+
+```bash
+git add apps/api/app/models.py apps/api/app/schemas.py apps/api/app/config.py apps/api/alembic/versions/
+git commit -m "[DB] Add Sprint 3 approval and execution persistence"
+
+git add apps/api/app/services/governance.py apps/api/app/routers/decisions.py apps/api/app/routers/approvals.py
+git commit -m "[FEAT] Complete governed approval lifecycle"
+
+git add apps/api/app/services/tool_execution.py apps/api/app/routers/executions.py apps/api/app/main.py apps/api/app/routers/__init__.py
+git commit -m "[FEAT] Add idempotent governed tool execution"
+```
+
+Before push:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+alembic upgrade head
+pytest -q
+cd ../..
+```
+
+Push:
+
+```bash
+git push -u origin sprint3/approval-execution-foundation
+```
+
+PR target:
+
+```text
+sprint3/approval-execution-foundation -> Sprint-3
+```
+
+PR title:
+
+```text
+Sprint 3: Complete Human Approval and Governed Tool Execution
+```
+
+PR description:
+
+```markdown
+## Sprint 3 - Approval and Execution Foundation
+
+### Jira Scope
+- Story 310 - Complete the human approval lifecycle
+- Tasks 311, 312, 313
+- Story 320 - Execute governed tools safely
+- Tasks 321, 322, 323
+
+### What This PR Adds
+- Approval queue and detail support
+- Approve, reject, cancel, and expiry transitions
+- Requester self-approval prevention
+- Correlated action requests and approvals
+- Tool execution records and statuses
+- Idempotency keys and duplicate-processing protection
+- Provider-neutral execution adapter
+- Execution attempt tracking and safe retry rules
+- Policy-controlled execution: allow executes, deny blocks, approval pauses
+- Alembic Sprint 3 schema migration
+
+### Acceptance Verification
+- [ ] Pending approval can be independently approved
+- [ ] Pending approval can be rejected
+- [ ] Requester/admin cancellation rules work
+- [ ] Expired approvals cannot execute
+- [ ] Requester cannot approve/reject own action
+- [ ] Allow executes once
+- [ ] Deny never invokes a provider
+- [ ] Approval-required execution waits for review
+- [ ] Idempotency prevents duplicate execution
+- [ ] Backend tests pass
+- [ ] CI passes
+
+### Target
+`Sprint-3`
+```
+
+After merge:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+```
+
+Update Jira 310-313 and 320-323 with the merged PR URL, test evidence, and completion notes.
+
+PR 2 - REAL-AGENT ADAPTER + MCP INTEGRATION
+===========================================
+Jira coverage:
+- Story 330 / Tasks 331, 332, 333
+- Story 340 / Tasks 341, 342, 343
+
+Branch:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+git switch -c sprint3/agent-mcp-integration
+```
+
+Primary implementation areas:
+
+```text
+apps/api/app/routers/agent_runtime.py
+apps/api/app/routers/integrations.py
+apps/api/app/services/ai_provider.py
+apps/api/app/services/tool_execution.py
+apps/api/app/services/security_guardrails.py
+apps/api/app/seed.py
+apps/api/app/config.py
+apps/api/app/schemas.py
+.env.example
+compose.yml
+```
+
+Suggested commits:
+
+```bash
+git add apps/api/app/routers/agent_runtime.py apps/api/app/services/ai_provider.py apps/api/app/seed.py
+git commit -m "[FEAT] Add governed AI agent runtime adapter"
+
+git add apps/api/app/routers/integrations.py apps/api/app/services/tool_execution.py apps/api/app/services/security_guardrails.py
+git commit -m "[FEAT] Add allowlisted MCP tool integration"
+
+git add apps/api/app/config.py apps/api/app/schemas.py .env.example compose.yml apps/api/app/main.py apps/api/app/routers/__init__.py
+git commit -m "[CONFIG] Add Sprint 3 agent and MCP provider settings"
+```
+
+Test:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+export MCP_MOCK_MODE=true
+export AI_PROVIDER=mock
+alembic upgrade head
+pytest -q tests/test_sprint3_agent_mcp_security.py
+pytest -q
+cd ../..
+```
+
+Push:
+
+```bash
+git push -u origin sprint3/agent-mcp-integration
+```
+
+PR target:
+
+```text
+sprint3/agent-mcp-integration -> Sprint-3
+```
+
+PR title:
+
+```text
+Sprint 3: Add Governed AI Agent and MCP Integration
+```
+
+PR description:
+
+```markdown
+## Sprint 3 - Agent and MCP Integration
+
+### Jira Scope
+- Story 330 - Integrate a real AI agent
+- Tasks 331, 332, 333
+- Story 340 - Integrate one MCP tool provider
+- Tasks 341, 342, 343
+
+### What This PR Adds
+- Normalized agent planning request/response contract
+- Registered-agent and registered-tool enforcement
+- Deterministic mock planner for local/CI use
+- Configurable OpenAI-compatible planner adapter
+- MCP client configuration through environment secrets
+- Local MCP mock mode
+- Remote JSON-RPC tools/list and tools/call support
+- Local allowlist intersection so remote discovery cannot expand permissions
+- Two non-destructive seeded MCP demo tools
+- MCP argument-field allowlists
+- Governance evaluation before every external tool invocation
+
+### Acceptance Verification
+- [ ] Agent plan selects only a registered tool
+- [ ] Unregistered proposed tool is rejected
+- [ ] Agent request is governed before execution
+- [ ] MCP mock mode works without credentials
+- [ ] Remote MCP configuration is environment-driven
+- [ ] Only locally registered MCP tools are exposed
+- [ ] Tool arguments are schema/allowlist checked
+- [ ] At least two safe MCP demo capabilities exist
+- [ ] Tests and CI pass
+
+### Target
+`Sprint-3`
+```
+
+After merge:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+```
+
+Update Jira 330-333 and 340-343 with PR, screenshots/API evidence, and test results.
+
+PR 3 - AI EXPLANATIONS + SECURITY GUARDRAILS
+===========================================
+Jira coverage:
+- Story 350 / Tasks 351, 352, 353
+- Story 360 / Tasks 361, 362, 363
+
+Branch:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+git switch -c sprint3/ai-security-guardrails
+```
+
+Primary implementation areas:
+
+```text
+apps/api/app/services/ai_provider.py
+apps/api/app/services/security_guardrails.py
+apps/api/app/routers/assistant.py
+apps/api/app/schemas.py
+apps/api/app/config.py
+```
+
+Suggested commits:
+
+```bash
+git add apps/api/app/services/ai_provider.py apps/api/app/routers/assistant.py apps/api/app/schemas.py
+git commit -m "[AI] Add grounded post-decision explanations"
+
+git add apps/api/app/services/security_guardrails.py apps/api/app/config.py
+git commit -m "[SEC] Add prompt and tool-execution guardrails"
+```
+
+Test:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+export AI_PROVIDER=mock
+pytest -q tests/test_sprint3_agent_mcp_security.py
+pytest -q tests/test_sprint3_approvals_explanations.py
+pytest -q
+cd ../..
+```
+
+Push:
+
+```bash
+git push -u origin sprint3/ai-security-guardrails
+```
+
+PR target:
+
+```text
+sprint3/ai-security-guardrails -> Sprint-3
+```
+
+PR title:
+
+```text
+Sprint 3: Add Grounded AI Explanations and Security Guardrails
+```
+
+PR description:
+
+```markdown
+## Sprint 3 - AI Explanations and Security
+
+### Jira Scope
+- Story 350 - Explain policy decisions with AI without changing them
+- Tasks 351, 352, 353
+- Story 360 - Add agent and MCP security guardrails
+- Tasks 361, 362, 363
+
+### What This PR Adds
+- Model-provider abstraction with deterministic fallback
+- Grounded decision-explanation schema
+- Explanation input based only on stored authoritative decision data
+- Safe provider-failure fallback
+- Explicit guarantee that explanation cannot override authorization
+- Prompt-injection detection before agent planning
+- Dangerous tool-argument rejection
+- Payload size limits
+- Recursive secret redaction for prompts, execution records, and audit metadata
+
+### Acceptance Verification
+- [ ] Explanation describes the stored decision
+- [ ] Explanation schema has no authorization-write field
+- [ ] Provider failure preserves original decision
+- [ ] Prompt-injection attempts are rejected
+- [ ] Unsafe argument keys are rejected
+- [ ] Secrets are redacted
+- [ ] No security check creates a policy bypass
+- [ ] Tests and CI pass
+
+### Target
+`Sprint-3`
+```
+
+After merge:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+```
+
+Update Jira 350-353 and 360-363.
+
+PR 4 - END-TO-END GOVERNANCE FRONTEND
+=====================================
+Jira coverage:
+- Story 370 / Tasks 371, 372, 373
+
+Branch:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+git switch -c sprint3/frontend-governance
+```
+
+Primary implementation areas:
+
+```text
+apps/web/src/main.tsx
+apps/web/src/styles.css
+apps/web/package.json
+```
+
+Suggested commit:
+
+```bash
+git add apps/web/src/main.tsx apps/web/src/styles.css apps/web/package.json
+git commit -m "[FEAT] Add Sprint 3 end-to-end governance UI"
+```
+
+Test:
+
+```bash
+cd apps/web
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+yarn install --frozen-lockfile
+yarn typecheck
+yarn build
+cd ../..
+```
+
+Run backend/frontend and manually verify the full flow:
+
+```text
+Agent instruction
+-> normalized plan
+-> deterministic policy result
+-> approval when required
+-> tool execution
+-> audit trail
+-> grounded explanation
+```
+
+Push:
+
+```bash
+git push -u origin sprint3/frontend-governance
+```
+
+PR target:
+
+```text
+sprint3/frontend-governance -> Sprint-3
+```
+
+PR title:
+
+```text
+Sprint 3: Add End-to-End Agent Governance Interface
+```
+
+PR description:
+
+```markdown
+## Sprint 3 - Governance Frontend
+
+### Jira Scope
+- Story 370 - Provide an end-to-end governance interface
+- Tasks 371, 372, 373
+
+### What This PR Adds
+- Governed-agent instruction workflow
+- Agent plan and execution result display
+- Approval queue with review actions and expiry visibility
+- Tool execution status/provider/attempt display
+- Correlated request and execution evidence
+- Grounded AI explanation display separated from authorization
+- Expanded Sprint 3 audit event filters
+- Sprint 3 version and capability updates
+
+### Acceptance Verification
+- [ ] Reviewer can inspect approval queue
+- [ ] Approver can approve/reject eligible requests
+- [ ] Execution status is visible
+- [ ] Correlation/request IDs are visible
+- [ ] AI explanation is clearly non-authoritative
+- [ ] Error/loading states are usable
+- [ ] Type check passes
+- [ ] Production frontend build passes
+- [ ] CI passes
+
+### Target
+`Sprint-3`
+```
+
+After merge:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+```
+
+Update Jira 370-373 with screenshots and the merged PR URL.
+
+PR 5 - TESTING, CI, DOCUMENTATION, AND SPRINT DEMO
+=================================================
+Jira coverage:
+- Story 380 / Tasks 381, 382, 383
+
+Branch:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+git switch -c sprint3/testing-docs
+```
+
+Primary implementation areas:
+
+```text
+apps/api/tests/conftest.py
+apps/api/tests/test_api_smoke.py
+apps/api/tests/test_sprint3_executions.py
+apps/api/tests/test_sprint3_agent_mcp_security.py
+apps/api/tests/test_sprint3_approvals_explanations.py
+.github/workflows/backend-ci.yml
+.github/workflows/frontend-ci.yml
+README.md
+CHANGELOG.md
+VERIFICATION.md
+SPRINT_3_RELEASE_NOTES.md
+docs/architecture-sprint3.md
+docs/sprint3-security-and-ai-evaluation.md
+sprints/sprint_3/
+```
+
+Suggested commits:
+
+```bash
+git add apps/api/tests .github/workflows
+git commit -m "[TEST] Add Sprint 3 governance and security coverage"
+
+git add README.md CHANGELOG.md VERIFICATION.md SPRINT_3_RELEASE_NOTES.md docs sprints/sprint_3
+git commit -m "[DOC] Complete Sprint 3 release and demo evidence"
+```
+
+Full verification:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+export MCP_MOCK_MODE=true
+export AI_PROVIDER=mock
+alembic upgrade head
+alembic current
+pytest -q
+cd ../web
+yarn install --frozen-lockfile
+yarn typecheck
+yarn build
+cd ../..
+```
+
+Push:
+
+```bash
+git push -u origin sprint3/testing-docs
+```
+
+PR target:
+
+```text
+sprint3/testing-docs -> Sprint-3
+```
+
+PR title:
+
+```text
+Sprint 3: Complete Testing, CI, Documentation, and Demo Evidence
+```
+
+PR description:
+
+```markdown
+## Sprint 3 - Testing and Evidence
+
+### Jira Scope
+- Story 380 - Test, document, and demonstrate Sprint 3
+- Tasks 381, 382, 383
+
+### What This PR Adds
+- Approval lifecycle tests
+- Governed execution tests
+- Idempotency and policy-bypass tests
+- Agent and MCP integration tests
+- Prompt-injection and redaction tests
+- Grounded-explanation safety tests
+- PostgreSQL-backed backend CI support for Sprint-3 PRs
+- Frontend CI support for Sprint-3 PRs
+- Sprint 3 architecture and AI/security documentation
+- Jira story/task CSV and sprint evidence
+- Sprint 3 demo script and release notes
+
+### Verification
+- [ ] Alembic migration reaches Sprint 3 head
+- [ ] Full backend test suite passes
+- [ ] Frontend type check passes
+- [ ] Frontend build passes
+- [ ] Backend GitHub Actions passes
+- [ ] Frontend GitHub Actions passes
+- [ ] Sprint 3 demo scenarios pass manually
+- [ ] No credentials/local artifacts are committed
+- [ ] Jira evidence is attached
+
+### Target
+`Sprint-3`
+```
+
+After merge:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+```
+
+Update Jira 380-383 and close the Sprint 3 feature work only after verification.
+
+FINAL SPRINT 3 INTEGRATION PR - Sprint-3 -> develop
+==================================================
+Before creating this PR:
+
+```bash
+git switch Sprint-3
+git pull origin Sprint-3
+git status
+```
+
+Run final local verification and confirm all feature PRs are merged.
+
+PR title:
+
+```text
+Sprint 3: Human Approval, Governed Agent/MCP Execution, AI Explanations, and Security
+```
+
+PR description:
+
+```markdown
+## AgentGuard Sprint 3 Integration
+
+### Overview
+This pull request merges the completed Sprint 3 implementation from `Sprint-3` into `develop`.
+
+Sprint 3 connects the deterministic AgentGuard policy layer to real-agent-compatible planning, human approval, governed tool execution, MCP adapters, grounded AI explanations, security guardrails, and end-to-end audit evidence.
+
+### Jira Scope
+- Epic 300
+- Stories 310, 320, 330, 340, 350, 360, 370, 380
+- Tasks 311-313, 321-323, 331-333, 341-343, 351-353, 361-363, 371-373, 381-383
+
+### Included
+- Complete approval lifecycle and independent-review rules
+- Idempotent governed tool execution
+- Deterministic allow/deny/approval enforcement before provider calls
+- Agent runtime and normalized tool plans
+- MCP mock and configurable remote integration
+- Registered-tool and argument allowlists
+- Grounded AI decision explanations
+- Prompt-injection detection and secret redaction
+- Sprint 3 governance frontend
+- Alembic Sprint 3 schema migration
+- Expanded automated tests and CI
+- Sprint architecture, security, Jira, release, and demo evidence
+
+### Final Verification
+- [ ] All Sprint 3 feature PRs are merged
+- [ ] PostgreSQL migrations reach Sprint 3 head
+- [ ] Backend test suite passes
+- [ ] Frontend type check passes
+- [ ] Frontend production build passes
+- [ ] Backend CI passes
+- [ ] Frontend CI passes
+- [ ] Allow scenario verified
+- [ ] Deny scenario verified
+- [ ] Approval -> execution scenario verified
+- [ ] Reject/cancel/expiry paths verified
+- [ ] MCP governed action verified
+- [ ] Prompt-injection rejection verified
+- [ ] Grounded explanation verified
+- [ ] Jira Sprint 3 evidence is complete
+- [ ] No secrets are committed
+
+### Merge Target
+`Sprint-3 -> develop`
+
+### Next
+After merge and integration verification, promote `develop -> main` as release `v0.3.0`.
+```
+
+After merge:
+
+```bash
+git switch develop
+git pull origin develop
+```
+
+RELEASE PR - develop -> main
+============================
+PR title:
+
+```text
+Release v0.3.0 - Sprint 3 Agent Governance and MCP Integration
+```
+
+PR description:
+
+```markdown
+## AgentGuard v0.3.0 - Sprint 3 Release
+
+### Overview
+This pull request promotes the completed and verified Sprint 3 implementation from `develop` to `main`.
+
+### Release Highlights
+- Human approval lifecycle with self-approval prevention
+- Idempotent governed tool execution
+- Agent runtime with mock/OpenAI-compatible planning adapter
+- MCP mock and configurable remote tool provider
+- Registered-tool/action/argument allowlists
+- Grounded AI explanations that cannot change authorization
+- Prompt-injection checks and secret redaction
+- Correlated policy, approval, execution, and audit evidence
+- Sprint 3 governance UI
+- Alembic Sprint 3 migration
+- Expanded backend tests and CI verification
+
+### Release Verification
+- [ ] `Sprint-3 -> develop` merged successfully
+- [ ] Backend CI is green
+- [ ] Frontend CI is green
+- [ ] PostgreSQL migration is at Sprint 3 head
+- [ ] Full Sprint 3 demo passes
+- [ ] Jira Sprint 3 is complete
+- [ ] Sprint 3 release notes are complete
+- [ ] No secrets/local artifacts are committed
+
+### Release Tag
+After merge, tag the release as `v0.3.0`.
+
+### Next Release
+Sprint 4 / `v1.0.0` will focus on production authentication, hardening, full regression/E2E testing, deployment, accessibility, performance, final documentation, and Capstone submission.
+
+### Merge Target
+`develop -> main`
+```
+
+TAG v0.3.0
+==========
+After the release PR is merged:
+
+```bash
+git switch main
+git pull origin main
+
+git tag -a v0.3.0 -m "AgentGuard Sprint 3 - Governed Agent and MCP Release"
+git push origin v0.3.0
+```
+
+Verify:
+
+```bash
+git tag --list "v0.3.0"
+git log --oneline --decorate -10
+```
+
+RESULTING HISTORY
+=================
+
+```text
+v0.2.0
+   |
+   v
+Sprint-3
+   |
+   +-- PR 1 approval + governed execution     [310, 320]
+   +-- PR 2 agent + MCP integration           [330, 340]
+   +-- PR 3 explanations + security           [350, 360]
+   +-- PR 4 end-to-end governance frontend    [370]
+   +-- PR 5 tests + docs + demo evidence      [380]
+   |
+   v
+Sprint-3 complete
+   |
+   | integration PR
+   v
+develop
+   |
+   | release PR
+   v
+main
+   |
+   v
+v0.3.0
+```
+
+JIRA EVIDENCE CHECKLIST
+=======================
+For every Sprint 3 story:
+
+```text
+- Correct status and Sprint assignment
+- Story points
+- Acceptance criteria
+- Linked sub-tasks
+- Feature branch name
+- PR URL
+- Relevant commit(s)
+- Test/CI evidence
+- Screenshot or API evidence where useful
+- Completion note
+```
+
+Recommended Jira transition:
+
+```text
+To Do -> In Progress -> In Review -> Done
+```
+
+Do not mark a story Done before the relevant PR is merged and its acceptance criteria are actually verified.
+
+FINAL SPRINT 3 VERIFICATION COMMANDS
+====================================
+PostgreSQL:
+
+```bash
+brew services start postgresql@16
+pg_isready
+```
+
+Backend:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+export ENVIRONMENT=test
+export SEED_DEMO_DATA=false
+export MCP_MOCK_MODE=true
+export AI_PROVIDER=mock
+
+alembic upgrade head
+alembic current
+pytest -q
+```
+
+Development backend:
+
+```bash
+export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard"
+export ENVIRONMENT=development
+export SEED_DEMO_DATA=true
+uvicorn app.main:app --reload --port 8000
+```
+
+Frontend in another terminal:
+
+```bash
+cd apps/web
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+yarn install --frozen-lockfile
+yarn typecheck
+yarn build
+yarn dev
+```
+
+Open:
+
+```text
+Frontend: http://localhost:5173
+API:      http://localhost:8000
+Swagger:  http://localhost:8000/docs
+Health:   http://localhost:8000/health
+```
+
+Sprint 3 manual acceptance scenarios:
+
+```text
+[ ] Profile read -> allow -> execution succeeds
+[ ] Production support access -> deny -> zero provider attempts
+[ ] Large refund -> requires approval -> independent approve -> succeeds
+[ ] Large refund -> reject -> execution cancelled
+[ ] Pending request -> requester cancel -> cancelled
+[ ] Expired approval -> cannot execute
+[ ] Duplicate idempotency key -> no duplicate execution
+[ ] Agent prompt -> registered tool plan -> governed execution
+[ ] Notification/case-note -> allowlisted MCP tool
+[ ] Prompt injection -> rejected before planning
+[ ] Unsafe argument key -> rejected
+[ ] Sensitive fields -> redacted
+[ ] AI explanation -> describes stored result and cannot override it
+[ ] Audit events share correlation IDs
+[ ] Backend CI green
+[ ] Frontend CI green
+```
+
+CLEANUP AFTER v0.3.0
+====================
+Delete local feature branches only after the release is safely merged/tagged:
+
+```bash
+git branch -d sprint3/approval-execution-foundation
+git branch -d sprint3/agent-mcp-integration
+git branch -d sprint3/ai-security-guardrails
+git branch -d sprint3/frontend-governance
+git branch -d sprint3/testing-docs
+```
+
+If you created the local snapshot branch:
+
+```bash
+git branch -D sprint3-full-snapshot
+```
+
+Keep `Sprint-3` if you want a permanent sprint branch in the Capstone history, or delete it only after confirming the merged history is preserved on develop/main.

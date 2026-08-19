@@ -1,0 +1,25 @@
+AgentGuard Sprint 3 v0.3.0 - Build Manifest
+
+Scope implemented:
+- Complete human approval lifecycle
+- Governed tool execution with idempotency and failure handling
+- Real-agent-compatible runtime with deterministic mock mode
+- MCP integration with safe local registry and optional remote discovery/execution
+- Grounded AI decision explanations with deterministic fallback
+- Prompt-injection, unsafe argument, and secret-redaction guardrails
+- Sprint 3 frontend approval/execution/governance workflow
+- Expanded audit metrics, tests, CI, documentation, and demo material
+
+Generation-time validation:
+- Alembic upgrade to Sprint 3 head succeeded on a fresh validation database
+- Alembic downgrade to Sprint 2 revision and re-upgrade to Sprint 3 head succeeded
+- Backend pytest suite: 37 passed
+- TypeScript strict type-check: passed
+
+Environment-dependent validation still required by the project owner:
+- Run PostgreSQL-backed GitHub Actions CI after integrating the Sprint 3 code
+- Run `yarn install --frozen-lockfile`, `yarn typecheck`, and `yarn build` locally/CI
+- Configure and test a real MCP server before claiming a real external integration demo
+- Configure and test a real OpenAI-compatible model endpoint if real AI explanations/planning are used
+
+The default mock modes are intentionally deterministic for local development and CI.
