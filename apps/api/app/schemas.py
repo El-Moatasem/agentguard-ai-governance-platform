@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Any, Optional
+
 from pydantic import BaseModel, Field, field_validator
-from .models import PolicyEffect, ApprovalStatus
+
+from .models import ApprovalStatus, ExecutionStatus, PolicyEffect
 
 ALLOWED_POLICY_KEYS = {"agent_name", "user_email", "action", "resource_name", "environment"}
 ALLOWED_OPERATORS = {"$eq", "$ne", "$in", "$not_in", "$gte", "$lte", "$gt", "$lt", "$contains"}
@@ -125,7 +127,86 @@ class ApprovalOut(BaseModel):
     status: ApprovalStatus
     reviewer_email: Optional[str]
     reviewer_notes: str
+    reviewed_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ToolExecutionRequest(BaseModel):
+    agent_name: str = Field(min_length=2, max_length=150)
+    tool_name: str = Field(min_length=2, max_length=150)
+    action: str = Field(min_length=1, max_length=100)
+    resource_name: str = Field(min_length=2, max_length=150)
+    environment: str = Field(default="sandbox", pattern="^(sandbox|staging|production)$")
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    context: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: Optional[str] = Field(default=None, min_length=8, max_length=96)
+
+
+class ToolExecutionOut(BaseModel):
+    id: int
+    action_request_id: int
+    tool_id: int
+    provider: str
+    tool_name: str
+    status: ExecutionStatus
+    idempotency_key: str
+    request_arguments: dict[str, Any]
+    response_data: dict[str, Any]
+    error_message: str
+    attempt_count: int
+    initiated_by_email: str
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApprovalDetail(BaseModel):
+    approval: ApprovalOut
+    action_request: ActionRequestOut
+    execution: Optional[ToolExecutionOut] = None
+
+
+class GovernedExecutionResponse(BaseModel):
+    correlation_id: str
+    decision: str
+    reason: str
+    action_request_id: int
+    approval_id: Optional[int] = None
+    execution: ToolExecutionOut
+
+
+class AgentPromptRequest(BaseModel):
+    agent_name: str = Field(min_length=2, max_length=150)
+    prompt: str = Field(min_length=3, max_length=4000)
+    environment: str = Field(default="sandbox", pattern="^(sandbox|staging|production)$")
+    auto_execute: bool = True
+
+
+class AgentPlan(BaseModel):
+    tool_name: str
+    action: str
+    resource_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    context: dict[str, Any] = Field(default_factory=dict)
+    rationale: str = ""
+
+
+class AgentRunResponse(BaseModel):
+    provider: str
+    plan: AgentPlan
+    governance: Optional[GovernedExecutionResponse] = None
 
 
 class AssistantExplainRequest(BaseModel):
     action_request_id: int
+
+
+class DecisionExplanation(BaseModel):
+    provider: str
+    summary: str
+    rationale: str
+    safety_note: str
+    matched_policy_id: Optional[int] = None

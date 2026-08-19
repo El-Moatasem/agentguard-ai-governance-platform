@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
-from sqlalchemy import Column, Enum as SAEnum, Index, JSON, String, UniqueConstraint
+
+from sqlalchemy import Column, Enum as SAEnum, Index, JSON, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -26,6 +27,17 @@ class ApprovalStatus(str, Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    expired = "expired"
+    cancelled = "cancelled"
+
+
+class ExecutionStatus(str, Enum):
+    blocked = "blocked"
+    pending_approval = "pending_approval"
+    running = "running"
+    succeeded = "succeeded"
+    failed = "failed"
+    cancelled = "cancelled"
 
 
 class User(SQLModel, table=True):
@@ -151,7 +163,35 @@ class Approval(SQLModel, table=True):
     reviewer_email: Optional[str] = Field(default=None, max_length=255)
     reviewer_notes: str = Field(default="", max_length=2000)
     reviewed_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class ToolExecution(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_execution_idempotency_key"),
+        Index("ix_execution_org_created", "organization_id", "created_at"),
+        Index("ix_execution_org_status", "organization_id", "status"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    organization_id: str = Field(index=True, default="demo-bank", max_length=100)
+    action_request_id: int = Field(foreign_key="actionrequest.id", index=True)
+    tool_id: int = Field(foreign_key="tool.id", index=True)
+    provider: str = Field(index=True, max_length=32)
+    tool_name: str = Field(index=True, max_length=150)
+    status: ExecutionStatus = Field(sa_column=Column(SAEnum(ExecutionStatus, native_enum=False, length=32), nullable=False, index=True))
+    idempotency_key: str = Field(index=True, max_length=96)
+    request_arguments: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    response_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    error_message: str = Field(default="", max_length=2000)
+    attempt_count: int = Field(default=0, ge=0)
+    initiated_by_email: str = Field(max_length=255)
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class AuditEvent(SQLModel, table=True):

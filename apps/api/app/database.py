@@ -14,12 +14,13 @@ engine = create_engine(
 
 
 def init_db() -> None:
-    """Create tables for local/test convenience.
+    """Create tables only for SQLite convenience.
 
-    PostgreSQL environments should also run `alembic upgrade head` so schema
-    changes are versioned and repeatable.
+    PostgreSQL is the primary Sprint 2+ database and must be initialized with
+    `alembic upgrade head` so every schema change remains versioned.
     """
-    SQLModel.metadata.create_all(engine)
+    if is_sqlite:
+        SQLModel.metadata.create_all(engine)
 
 
 def get_session() -> Generator[Session, None, None]:

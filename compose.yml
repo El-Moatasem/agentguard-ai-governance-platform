@@ -22,6 +22,10 @@ services:
       API_CORS_ORIGINS: http://localhost:5173,http://localhost:3000
       ENVIRONMENT: development
       SEED_DEMO_DATA: "true"
+      APPROVAL_TTL_MINUTES: "60"
+      MAX_EXECUTION_ATTEMPTS: "3"
+      MCP_MOCK_MODE: "true"
+      AI_PROVIDER: "mock"
     ports:
       - "8000:8000"
     volumes:

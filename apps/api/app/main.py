@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session
+
 from .config import get_settings
 from .database import engine, init_db
-from .routers import agents, approvals, assistant, audit, auth, decisions, policies
+from .routers import agent_runtime, agents, approvals, assistant, audit, auth, decisions, executions, integrations, policies
 from .seed import seed_demo_data
 
 settings = get_settings()
@@ -22,7 +24,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Deterministic governance, policy evaluation, approvals, and auditability for AI agents.",
+    description="Deterministic AI-agent governance with policy enforcement, human approval, governed tool execution, MCP adapters, and auditability.",
     lifespan=lifespan,
 )
 
@@ -53,8 +55,21 @@ def health():
         "service": "agentguard-api",
         "version": settings.app_version,
         "environment": settings.environment,
+        "mcp_mode": "mock" if settings.mcp_mock_mode or not settings.mcp_server_url else "remote",
+        "ai_provider": settings.ai_provider,
     }
 
 
-for router in [auth.router, agents.router, policies.router, decisions.router, approvals.router, audit.router, assistant.router]:
+for router in [
+    auth.router,
+    agents.router,
+    policies.router,
+    decisions.router,
+    approvals.router,
+    executions.router,
+    agent_runtime.router,
+    integrations.router,
+    audit.router,
+    assistant.router,
+]:
     app.include_router(router, prefix="/api/v1")
