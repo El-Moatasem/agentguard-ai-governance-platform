@@ -1,12 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session
 
 from .config import get_settings
 from .database import engine, init_db
-from .routers import agent_runtime, agents, approvals, assistant, audit, auth, decisions, executions, integrations, policies
+from .routers import agent_runtime, agents, approvals, assistant, audit, auth, decisions, executions, integrations, policies, release
 from .seed import seed_demo_data
 
 settings = get_settings()
@@ -36,6 +36,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    if settings.security_headers_enabled:
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("X-AgentGuard-Version", settings.app_version)
+    return response
+
 
 @app.get("/")
 def root():
@@ -57,6 +68,7 @@ def health():
         "environment": settings.environment,
         "mcp_mode": "mock" if settings.mcp_mock_mode or not settings.mcp_server_url else "remote",
         "ai_provider": settings.ai_provider,
+        "release": settings.release_name,
     }
 
 
@@ -69,6 +81,7 @@ for router in [
     executions.router,
     agent_runtime.router,
     integrations.router,
+    release.router,
     audit.router,
     assistant.router,
 ]:

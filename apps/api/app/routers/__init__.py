@@ -1,4 +1,4 @@
-from . import agent_runtime, agents, approvals, assistant, audit, auth, decisions, executions, integrations, policies
+from . import agent_runtime, agents, approvals, assistant, audit, auth, decisions, executions, integrations, policies, release
 
 __all__ = [
     "agent_runtime",
@@ -11,4 +11,5 @@ __all__ = [
     "executions",
     "integrations",
     "policies",
+    "release",
 ]

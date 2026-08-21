@@ -21,7 +21,7 @@ def _commit_or_conflict(session: Session, detail: str) -> None:
 @router.get("/agents")
 def list_agents(
     status: str | None = None,
-    user: User = Depends(require_roles(Role.admin, Role.developer, Role.auditor)),
+    user: User = Depends(require_roles(Role.admin, Role.developer, Role.approver, Role.auditor)),
     session: Session = Depends(get_session),
 ):
     statement = select(Agent).where(Agent.organization_id == user.organization_id)
@@ -54,7 +54,7 @@ def create_agent(
 @router.get("/resources")
 def list_resources(
     classification: str | None = None,
-    user: User = Depends(require_roles(Role.admin, Role.developer, Role.auditor)),
+    user: User = Depends(require_roles(Role.admin, Role.developer, Role.approver, Role.auditor)),
     session: Session = Depends(get_session),
 ):
     statement = select(ProtectedResource).where(ProtectedResource.organization_id == user.organization_id)
@@ -87,7 +87,7 @@ def create_resource(
 @router.get("/tools")
 def list_tools(
     agent_id: int | None = None,
-    user: User = Depends(require_roles(Role.admin, Role.developer, Role.auditor)),
+    user: User = Depends(require_roles(Role.admin, Role.developer, Role.approver, Role.auditor)),
     session: Session = Depends(get_session),
 ):
     statement = select(Tool).where(Tool.organization_id == user.organization_id)
