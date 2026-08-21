@@ -27,15 +27,15 @@ def reset_test_database():
 
     with Session(engine) as session:
         # Delete child/dependent records first because of foreign keys.
-        session.exec(delete(Approval))
-        session.exec(delete(AuditEvent))
-        session.exec(delete(ActionRequest))
-        session.exec(delete(PolicyVersion))
-        session.exec(delete(Tool))
-        session.exec(delete(Policy))
-        session.exec(delete(ProtectedResource))
-        session.exec(delete(Agent))
-        session.exec(delete(User))
+        session.exec(delete(Approval))  # type: ignore[call-overload]
+        session.exec(delete(AuditEvent))  # type: ignore[call-overload]
+        session.exec(delete(ActionRequest))  # type: ignore[call-overload]
+        session.exec(delete(PolicyVersion))  # type: ignore[call-overload]
+        session.exec(delete(Tool))  # type: ignore[call-overload]
+        session.exec(delete(Policy))  # type: ignore[call-overload]
+        session.exec(delete(ProtectedResource))  # type: ignore[call-overload]
+        session.exec(delete(Agent))  # type: ignore[call-overload]
+        session.exec(delete(User))  # type: ignore[call-overload]
 
         session.commit()
 
