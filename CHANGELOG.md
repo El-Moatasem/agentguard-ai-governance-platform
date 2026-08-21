@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.0 - Sprint 4 Final Capstone Release
+
+- Added final readiness, demo-flow, and submission-checklist APIs.
+- Added security headers and release traceability.
+- Rebuilt the React UI into an interactive final demonstration cockpit.
+- Added Sprint 4 tests and final release documentation.
+- Added final presentation and run/test guides.
+
+# Changelog
+
 ## [0.3.0] - Sprint 3 Release Candidate
 
 ### Added

@@ -1,5 +1,5 @@
 import pytest
-from sqlmodel import Session, delete
+from sqlmodel import SQLModel, Session, delete
 
 from app.database import engine
 from app.models import (
@@ -15,6 +15,13 @@ from app.models import (
     User,
 )
 from app.seed import seed_demo_data
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_sqlite_schema_for_local_tests():
+    # SQLite is a convenience fallback for local tests. PostgreSQL CI applies Alembic before pytest.
+    if engine.dialect.name == "sqlite":
+        SQLModel.metadata.create_all(engine)
 
 
 @pytest.fixture(autouse=True)

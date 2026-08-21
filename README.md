@@ -1,4 +1,6 @@
-# AgentGuard: AI Agent Governance, Access Control, and Audit Platform
+# AgentGuard
+
+**Final release:** v1.0.0 - Sprint 4 MSSE Capstone submission candidate: AI Agent Governance, Access Control, and Audit Platform
 
 AgentGuard is a Quantic MSSE Capstone project that places a deterministic governance gateway between AI agents and external tools. It registers agents and tools, evaluates every requested action against versioned policies, pauses sensitive actions for independent human approval, executes only authorized tools, and records correlated audit evidence.
 
@@ -220,3 +222,18 @@ Final demo video:       TODO Sprint 4 Google Drive link
 ## Academic Integrity
 
 AI-assisted tools may support planning, scaffolding, code review, testing, and documentation, but all submitted code should be reviewed, understood, tested, adapted, and explained by the project author. Maintain accurate Jira status, commit/PR history, test evidence, architectural decisions, sprint demos, and third-party attribution.
+
+
+## Final Sprint 4 release
+
+AgentGuard v1.0.0 completes the four-sprint Capstone build with a polished final UI, release-readiness API, security headers, submission checklist, final demo flow, and documentation for deployment and final presentation.
+
+Final evidence placeholders to update before submission:
+
+- Deployed application URL: `TBD`
+- Jira board URL: `TBD`
+- Final demo video URL: `TBD`
+- Design and testing document: `docs/final-architecture-and-testing.md`
+- Sprint 4 release notes: `SPRINT_4_RELEASE_NOTES.md`
+
+Important: share the repository with `quantic-grader` before submitting.
