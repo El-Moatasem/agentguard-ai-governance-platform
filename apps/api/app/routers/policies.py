@@ -44,7 +44,7 @@ def list_policies(
     effect: PolicyEffect | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
-    user: User = Depends(require_roles(Role.admin, Role.developer, Role.auditor)),
+    user: User = Depends(require_roles(Role.admin, Role.developer, Role.approver, Role.auditor)),
     session: Session = Depends(get_session),
 ):
     statement = select(Policy).where(Policy.organization_id == user.organization_id)
@@ -58,7 +58,7 @@ def list_policies(
 @router.get("/{policy_id}")
 def get_policy(
     policy_id: int,
-    user: User = Depends(require_roles(Role.admin, Role.developer, Role.auditor)),
+    user: User = Depends(require_roles(Role.admin, Role.developer, Role.approver, Role.auditor)),
     session: Session = Depends(get_session),
 ):
     return _get_policy_or_404(session, policy_id, user.organization_id)
@@ -134,7 +134,7 @@ def update_policy(
 @router.get("/{policy_id}/versions")
 def list_policy_versions(
     policy_id: int,
-    user: User = Depends(require_roles(Role.admin, Role.developer, Role.auditor)),
+    user: User = Depends(require_roles(Role.admin, Role.developer, Role.approver, Role.auditor)),
     session: Session = Depends(get_session),
 ):
     _get_policy_or_404(session, policy_id, user.organization_id)

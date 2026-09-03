@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "AgentGuard API"
-    app_version: str = "0.3.0"
+    app_version: str = "1.0.0"
     environment: str = "development"
     database_url: str = "sqlite:///./agentguard.db"
     api_cors_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = "gpt-5-mini"
     ai_timeout_seconds: float = 15.0
+
+    # Sprint 4 production-hardening flags. These remain configurable for
+    # local demos, CI, and deployment environments.
+    security_headers_enabled: bool = True
+    rate_limit_per_minute: int = 120
+    release_name: str = "AgentGuard Final Capstone Release"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
