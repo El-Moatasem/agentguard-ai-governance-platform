@@ -1,0 +1,399 @@
+AgentGuard Sprint 4 - Git Flow, Feature PRs, Release PRs and Merge Commands
+==============================================================================
+
+Purpose
+-------
+Use this workflow to integrate the final Sprint 4 v1.0.0 source code without losing Sprint 1-3 history. The flow creates focused PRs that map to the Sprint 4 Jira stories and then promotes Sprint-4 to develop and main.
+
+Recommended final branch flow:
+
+    v0.3.0
+       |
+       v
+    develop
+       |
+       v
+    Sprint-4
+       |
+       +-- PR 1: final readiness + security hardening
+       +-- PR 2: UI/UX and final demo cockpit
+       +-- PR 3: regression tests and CI evidence
+       +-- PR 4: deployment, architecture, cost and submission docs
+       +-- PR 5: sprint evidence, release notes and presentation assets
+       |
+       v
+    Sprint-4 complete
+       |
+       v
+    develop
+       |
+       v
+    main
+       |
+       v
+    v1.0.0
+
+Important rules
+---------------
+- Do not overwrite `.git`.
+- Do not commit `.env`, local databases, `.venv`, `node_modules`, `dist`, `.DS_Store`, or secrets.
+- Keep the existing passing CI workflows unless the Sprint 4 code intentionally changes them.
+- Attach each PR to the relevant Jira story or task.
+- Merge only after backend CI and frontend CI are green.
+
+Step 1 - Start from the completed Sprint 3 release
+==================================================
+
+    git switch main
+    git pull origin main
+    git tag --list
+
+Confirm that `v0.3.0` exists or that the Sprint 3 release is already merged.
+
+    git switch develop
+    git pull origin develop
+
+Create the Sprint 4 integration branch:
+
+    git switch -c Sprint-4
+    git push -u origin Sprint-4
+
+Step 2 - Copy the Sprint 4 generated source safely
+==================================================
+
+Extract `AgentGuard_Capstone_Sprint4_v1.0.0.zip` into a temporary directory outside your repository.
+
+Then copy the generated code into your local repository, excluding Git and local files:
+
+    rsync -av       --exclude='.git/'       --exclude='.env'       --exclude='.venv/'       --exclude='node_modules/'       --exclude='dist/'       --exclude='__pycache__/'       --exclude='.DS_Store'       /PATH/TO/EXTRACTED/AgentGuard_Capstone_Sprint4_v1.0.0/       /PATH/TO/YOUR/agentguard-ai-governance-platform/
+
+Review changes:
+
+    git status
+    git diff --stat
+
+Step 3 - Preserve a temporary full Sprint 4 snapshot
+====================================================
+
+This lets you split Sprint 4 into focused PRs without losing any generated files.
+
+    git switch -c sprint4-full-snapshot
+    git add -A
+    git commit -m "WIP: preserve complete Sprint 4 final implementation"
+
+Do not open a PR from this branch. It is only a temporary source branch.
+
+Return to the clean Sprint-4 baseline:
+
+    git switch Sprint-4
+    git status
+
+If needed, reset Sprint-4 to the remote baseline before splitting:
+
+    git reset --hard origin/Sprint-4
+
+Step 4 - PR 1: Release readiness and security hardening
+=======================================================
+
+Jira mapping:
+- Story 410: Replace demonstration access with production-ready authentication/security posture
+- Story 430: Complete security and privacy hardening
+- Story 460: Deployment readiness foundation
+
+Create branch:
+
+    git switch Sprint-4
+    git pull origin Sprint-4
+    git switch -c sprint4/release-readiness-security
+
+Restore files from the snapshot:
+
+    git checkout sprint4-full-snapshot --       apps/api/app/config.py       apps/api/app/main.py       apps/api/app/routers/__init__.py       apps/api/app/routers/release.py       apps/api/tests/test_sprint4_release_readiness.py
+
+Review and test:
+
+    git status
+    git diff --stat
+
+    cd apps/api
+    source .venv/bin/activate
+    export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+    export ENVIRONMENT=test
+    export SEED_DEMO_DATA=false
+    export MCP_MOCK_MODE=true
+    export AI_PROVIDER=mock
+    alembic upgrade head
+    pytest -q
+    cd ../..
+
+Commit and push:
+
+    git add -A
+    git commit -m "[SECURITY] Add final readiness endpoints and security headers"
+    git push -u origin sprint4/release-readiness-security
+
+PR title:
+
+    Sprint 4: Final Readiness and Security Hardening
+
+PR description:
+
+    This PR adds the Sprint 4 final release-readiness API, demo-flow API, submission-checklist API, security headers, and release traceability. It supports final Capstone demo evidence and production-readiness review. Jira stories covered: 410, 430, 460.
+
+Step 5 - PR 2: Enhanced UI/UX and final demo cockpit
+====================================================
+
+Jira mapping:
+- Story 450: Polish accessibility and user experience
+- Story 490: Record and submit the final Capstone demonstration
+
+Create branch:
+
+    git switch Sprint-4
+    git pull origin Sprint-4
+    git switch -c sprint4/final-ui-demo-cockpit
+
+Restore files:
+
+    git checkout sprint4-full-snapshot --       apps/web/src/main.tsx       apps/web/src/styles.css       apps/web/package.json
+
+Verify frontend:
+
+    cd apps/web
+    corepack enable
+    corepack prepare yarn@1.22.22 --activate
+    yarn install --frozen-lockfile
+    yarn typecheck
+    yarn build
+    cd ../..
+
+Commit and push:
+
+    git add -A
+    git commit -m "[UI] Add final interactive AgentGuard demonstration cockpit"
+    git push -u origin sprint4/final-ui-demo-cockpit
+
+PR title:
+
+    Sprint 4: Final Interactive UI and Demo Experience
+
+PR description:
+
+    This PR upgrades the AgentGuard frontend for the final Capstone demo. It adds a polished hero, role switcher, tabbed navigation, readiness score, overview metrics, quick policy scenarios, governed agent flow, approval queue, audit export, and final readiness screen. Jira stories covered: 450 and 490.
+
+Step 6 - PR 3: Regression tests and final quality checks
+========================================================
+
+Jira mapping:
+- Story 420: Complete full automated regression coverage
+- Story 430: Security and privacy hardening
+
+Create branch:
+
+    git switch Sprint-4
+    git pull origin Sprint-4
+    git switch -c sprint4/regression-tests-quality
+
+Restore test and CI-adjacent files:
+
+    git checkout sprint4-full-snapshot --       apps/api/tests/test_sprint4_release_readiness.py       VERIFICATION.md
+
+Run full backend test suite:
+
+    cd apps/api
+    source .venv/bin/activate
+    export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+    export ENVIRONMENT=test
+    export SEED_DEMO_DATA=false
+    export MCP_MOCK_MODE=true
+    export AI_PROVIDER=mock
+    alembic upgrade head
+    pytest -q
+    cd ../..
+
+Run frontend checks:
+
+    cd apps/web
+    yarn typecheck
+    yarn build
+    cd ../..
+
+Commit and push:
+
+    git add -A
+    git commit -m "[TEST] Add Sprint 4 release readiness and security regression tests"
+    git push -u origin sprint4/regression-tests-quality
+
+PR title:
+
+    Sprint 4: Final Regression Testing and Quality Checks
+
+PR description:
+
+    This PR adds Sprint 4 regression checks for final release endpoints and security headers, preserving the Sprint 1-3 test suite. It supports final submission confidence and CI evidence. Jira stories covered: 420 and 430.
+
+Step 7 - PR 4: Deployment, architecture, cost and submission documentation
+==========================================================================
+
+Jira mapping:
+- Story 440: Improve performance, resilience, and recoverability
+- Story 460: Deploy the complete production system
+- Story 470: Finalize architecture, design, testing, and cost documentation
+- Story 480: Complete agile, repository, and release evidence
+
+Create branch:
+
+    git switch Sprint-4
+    git pull origin Sprint-4
+    git switch -c sprint4/final-docs-deployment
+
+Restore documentation:
+
+    git checkout sprint4-full-snapshot --       README.md       CHANGELOG.md       SPRINT_4_RELEASE_NOTES.md       docs/final-architecture-and-testing.md       docs/THIRD_PARTY_NOTICES.md       sprints/sprint_4
+
+Review:
+
+    git status
+    git diff --stat
+
+Check for secrets:
+
+    git grep -n "AI_API_KEY" || true
+    git grep -n "MCP_AUTH_TOKEN" || true
+    git status --ignored
+
+Commit and push:
+
+    git add -A
+    git commit -m "[DOC] Complete Sprint 4 final release and submission documentation"
+    git push -u origin sprint4/final-docs-deployment
+
+PR title:
+
+    Sprint 4: Final Documentation, Deployment Readiness and Release Evidence
+
+PR description:
+
+    This PR completes the final Sprint 4 documentation package: release notes, final architecture/testing summary, third-party notices, Sprint 4 Jira evidence, final demo script, and final submission placeholders. Jira stories covered: 440, 460, 470 and 480.
+
+Step 8 - PR 5: Final presentation and capstone evidence assets
+==============================================================
+
+Jira mapping:
+- Story 490: Record and submit the final Capstone demonstration
+- Story 480: Complete agile, repository, and release evidence
+
+Create branch:
+
+    git switch Sprint-4
+    git pull origin Sprint-4
+    git switch -c sprint4/final-presentation-evidence
+
+Add your final generated presentation and evidence files if you want them tracked in the repository:
+
+    mkdir -p docs/final_presentation
+    cp /PATH/TO/AgentGuard_Final_Capstone_Presentation.pptx docs/final_presentation/
+    cp /PATH/TO/AgentGuard_Sprint4_Run_Backend_Frontend_Tests.txt docs/final_presentation/
+    cp /PATH/TO/AgentGuard_Sprint4_Git_Flow_and_PRs.txt docs/final_presentation/
+
+Commit and push:
+
+    git add docs/final_presentation
+    git commit -m "[DOC] Add final Capstone presentation and demo-support assets"
+    git push -u origin sprint4/final-presentation-evidence
+
+PR title:
+
+    Sprint 4: Final Presentation and Demo Evidence Assets
+
+PR description:
+
+    This PR adds final Capstone presentation and demo-support artifacts used to prepare the 15-20 minute UI demonstration and submission package. Jira stories covered: 480 and 490.
+
+Step 9 - Integrate Sprint-4 into develop
+========================================
+
+After all Sprint 4 feature PRs are merged into Sprint-4 and CI is green:
+
+    git switch Sprint-4
+    git pull origin Sprint-4
+
+Open PR:
+
+    Sprint-4 -> develop
+
+PR title:
+
+    Sprint 4: Final Capstone Release Candidate
+
+PR description:
+
+    This PR integrates Sprint 4 into develop. It completes the final AgentGuard release candidate with security hardening, release-readiness endpoints, enhanced UI/UX, final documentation, test evidence, and Capstone demo preparation. After merging, develop will represent the final release candidate before promotion to main.
+
+After merge:
+
+    git switch develop
+    git pull origin develop
+
+Step 10 - Release develop to main and tag v1.0.0
+================================================
+
+Open PR:
+
+    develop -> main
+
+PR title:
+
+    Release v1.0.0 - AgentGuard Final Capstone Release
+
+PR description:
+
+    This PR promotes the final AgentGuard Sprint 4 release candidate from develop to main. Version v1.0.0 completes all four Capstone sprints and includes the final UI, backend readiness endpoints, PostgreSQL/Alembic architecture, deterministic policy engine, human approval workflow, governed tool execution, AI/MCP adapter support, audit export, release documentation, and final demo preparation.
+
+After merge:
+
+    git switch main
+    git pull origin main
+    git tag -a v1.0.0 -m "AgentGuard Final Capstone Release"
+    git push origin v1.0.0
+
+Final cleanup
+=============
+
+Delete the temporary snapshot after v1.0.0 is safely tagged:
+
+    git branch -D sprint4-full-snapshot
+
+If pushed to GitHub:
+
+    git push origin --delete sprint4-full-snapshot
+
+Final verification before submission
+====================================
+
+    cd apps/api
+    source .venv/bin/activate
+    export DATABASE_URL="postgresql+psycopg://agentguard:agentguard_dev_password@localhost:5432/agentguard_test"
+    export ENVIRONMENT=test
+    export SEED_DEMO_DATA=false
+    export MCP_MOCK_MODE=true
+    export AI_PROVIDER=mock
+    alembic upgrade head
+    pytest -q
+
+    cd ../web
+    yarn install --frozen-lockfile
+    yarn typecheck
+    yarn build
+
+Required final evidence
+=======================
+
+- GitHub repo is accessible and shared with quantic-grader.
+- README includes deployed app URL.
+- README includes Jira board URL.
+- README includes final demo video URL.
+- Jira Sprint 1-4 stories have accurate statuses and PR links.
+- CI checks are green on main.
+- v1.0.0 tag exists.
+- Final 15-20 minute demo video is recorded and accessible.
