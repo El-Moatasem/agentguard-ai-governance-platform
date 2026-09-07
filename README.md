@@ -338,22 +338,39 @@ sprints/
 
 ## Final Submission Links
 
-**Replace all placeholders before submitting to Quantic.**
+The following links identify the final AgentGuard Capstone submission artifacts.
 
-- GitHub repository: https://github.com/El-Moatasem/agentguard-ai-governance-platform
-- Deployed application: **[ADD_DEPLOYED_APPLICATION_URL]**
-- Jira / agile task board: **[ADD_ACCESSIBLE_JIRA_BOARD_URL]**
-- Final design and testing document: `docs/FINAL_DESIGN_AND_TESTING.md`
-- Final demo video: **[ADD_GOOGLE_DRIVE_VIDEO_URL]**
-- Release tag: `v1.0.0`
+- **GitHub repository:**  
+  https://github.com/El-Moatasem/agentguard-ai-governance-platform
+
+- **Jira / agile task board:**  
+  https://elmoatasemsworkspace-17475588.atlassian.net/jira/software/projects/KAN/summary
+
+- **Production frontend:**  
+  https://agentguard-web-iqtl.onrender.com/
+
+- **Production backend:**  
+  https://agentguard-ai-governance-platform.onrender.com/
+
+- **Swagger API documentation:**  
+  https://agentguard-ai-governance-platform.onrender.com/docs
+
+- **Final design and testing document:**  
+  https://github.com/El-Moatasem/agentguard-ai-governance-platform/blob/main/docs/FINAL_DESIGN_AND_TESTING.md
+
+- **Final demo video:**  
+  **[ADD_GOOGLE_DRIVE_VIDEO_URL_AFTER_RECORDING]**
+
+- **Release tag:**  
+  `v1.0.0`
 
 Before submission:
 
 1. Share the repository with the GitHub account `quantic-grader`.
-2. Verify all links from an incognito/private browser window.
-3. Ensure the final video is a single `.mp4` or `.mov`, is 15-20 minutes, and is shared from Google Drive as **Anyone with the link can view**.
-4. Ensure the deployed application remains reachable during grading.
-
+2. Verify the GitHub repository, Jira board, production frontend, production backend, Swagger API, and design/testing document from an incognito/private browser window.
+3. Replace the final demo video placeholder with the Google Drive URL after recording.
+4. Ensure the final video is a single `.mp4` or `.mov`, is 15-20 minutes, and is shared from Google Drive as **Anyone with the link can view**.
+5. Ensure the deployed application remains reachable during grading.
 ## Limitations
 
 AgentGuard is a Capstone-grade governance prototype rather than a universal enterprise governance product.
