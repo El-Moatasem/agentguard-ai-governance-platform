@@ -319,8 +319,6 @@ docs/
   FINAL_DESIGN_AND_TESTING.md
   FINAL_DEPLOYMENT_AND_COSTS.md
   FINAL_TRACEABILITY_MATRIX.md
-  FINAL_DEMO_SCRIPT_15_20_MIN.md
-  FINAL_SUBMISSION_CHECKLIST.md
 
 policy/
   examples/
@@ -358,8 +356,6 @@ The following links identify the final AgentGuard Capstone submission artifacts.
 - **Final design and testing document:**  
   https://github.com/El-Moatasem/agentguard-ai-governance-platform/blob/main/docs/FINAL_DESIGN_AND_TESTING.md
 
-- **Final demo video:**  
-  **[ADD_GOOGLE_DRIVE_VIDEO_URL_AFTER_RECORDING]**
 
 - **Release tag:**  
   `v1.0.0`
